@@ -1,0 +1,36 @@
+// ============================================
+// OBSERVER DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS OBSERVER PATTERN?
+ *
+ * The Observer Pattern is a behavioral design pattern where an object (Subject)
+ * maintains a list of dependents (Observers) and notifies them automatically
+ * when its state changes.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of YouTube subscriptions:
+ * - YouTuber (Subject) posts a new video
+ * - All subscribers (Observers) get notified automatically
+ * - Subscribers can subscribe or unsubscribe anytime
+ * - YouTuber doesn't need to know who the subscribers are
+ *
+ * ANOTHER ANALOGY:
+ * Newspaper subscription:
+ * - Newspaper (Subject) publishes daily
+ * - Subscribers (Observers) receive it automatically
+ * - Can subscribe/unsubscribe anytime
+ *
+ * COMPONENTS:
+ * 1. Subject: The object being watched (the "publisher")
+ * 2. Observer: Objects that want to be notified (the "subscribers")
+ * 3. ConcreteSubject: Actual implementation of Subject
+ * 4. ConcreteObserver: Actual implementation of Observer
+ *
+ * WHEN TO USE:
+ * - When one object changes and others need to react
+ * - When you want loose coupling between objects
+ * - When you don't know how many objects need to be notified
+ * - Event-driven systems
+ */
