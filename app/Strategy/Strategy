@@ -1,0 +1,298 @@
+
+// ============================================
+// STRATEGY DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS STRATEGY PATTERN?
+ *
+ * The Strategy Pattern is a behavioral design pattern that defines a family of algorithms,
+ * encapsulates each one, and makes them interchangeable. Strategy lets the algorithm vary
+ * independently from clients that use it.
+ *
+ * SIMPLE EXPLANATION:
+ * Instead of having many if-else or switch statements to choose behavior,
+ * you create separate classes for each behavior and swap them as needed.
+ *
+ * REAL-WORLD ANALOGY 1: TRANSPORTATION
+ * You need to go to the airport:
+ * - Strategy 1: Drive a car (fast, expensive)
+ * - Strategy 2: Take a bus (slow, cheap)
+ * - Strategy 3: Call a taxi (medium speed, medium price)
+ * - Strategy 4: Ride a bike (slow, free)
+ *
+ * All achieve the same goal (get to airport) but use different methods.
+ * You choose the strategy based on situation (time, money, distance).
+ *
+ * REAL-WORLD ANALOGY 2: PAYMENT METHODS (E-COMMERCE)
+ * Customer wants to pay for purchase:
+ * - Strategy 1: Credit Card (instant, 2.5% fee)
+ * - Strategy 2: PayPal (instant, 2.9% + $0.30 fee)
+ * - Strategy 3: Bank Transfer (3-5 days, no fee)
+ * - Strategy 4: Cash on Delivery (pay on arrival, no processing fee)
+ *
+ * All achieve the same goal (pay for order) but with different methods and fees.
+ *
+ * REAL-WORLD ANALOGY 3: CUSTOMER PRICING
+ * E-commerce platform with different customer segments:
+ * - Strategy 1: Regular Customer (full price, 0% discount)
+ * - Strategy 2: Gold Member (10% discount)
+ * - Strategy 3: Premium Member (20% discount)
+ * - Strategy 4: VIP Member (30% discount)
+ *
+ * All calculate price but apply different discount rules.
+ *
+ * MORE ANALOGIES:
+ * - Shipping Methods: Standard, Express, Overnight
+ * - Compression: Zip, Rar, Gzip, 7z
+ * - Sorting: QuickSort, MergeSort, BubbleSort
+ * - Authentication: Password, OAuth, Biometric, 2FA
+ *
+ * COMPONENTS:
+ * 1. Strategy Interface: Defines the contract for all strategies
+ * 2. Concrete Strategies: Different implementations of the interface
+ * 3. Context: Uses a strategy and can switch between them
+ * 4. Client: Chooses which strategy to use
+ *
+ * WHEN TO USE:
+ * - Multiple ways to do the same thing
+ * - Want to avoid long if-else or switch statements
+ * - Algorithms need to be selected at runtime
+ * - Want to isolate algorithm implementation from usage
+ * - Different variants of an algorithm exist
+ * - Need to swap behavior dynamically
+ *
+ * WHEN NOT TO USE:
+ * - Only 1-2 algorithms (overkill, just use if-else)
+ * - Algorithms never change
+ * - Logic is very simple
+ * - All clients need to know about all strategies
+ * - Performance is critical (strategy adds slight overhead)
+ *
+ * BENEFITS:
+ * ✅ Open/Closed Principle: Add new strategies without changing context
+ * ✅ Single Responsibility: Each strategy focuses on one algorithm
+ * ✅ Eliminates conditional statements (no if-else chains)
+ * ✅ Runtime flexibility: Switch strategies on the fly
+ * ✅ Easy to test: Test each strategy independently
+ * ✅ Clean code: Separate algorithms from business logic
+ * ✅ Reusability: Strategies can be reused in different contexts
+ * ✅ Composition over inheritance: Use composition, not inheritance
+ *
+ * DRAWBACKS:
+ * ❌ More classes: Each strategy is a separate class
+ * ❌ Clients must know strategies: Need to choose which to use
+ * ❌ Increased complexity for simple cases
+ * ❌ Overhead if strategies don't differ much
+ * ❌ More objects to manage
+ */
+
+// ============================================
+// STRUCTURE OF STRATEGY PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ *                    ┌─────────────────┐
+ *                    │     Client      │
+ *                    └────────┬────────┘
+ *                             │ uses
+ *                             ↓
+ *                    ┌─────────────────┐
+ *                    │    Context      │
+ *                    ├─────────────────┤
+ *                    │ - strategy      │
+ *                    ├─────────────────┤
+ *                    │ + setStrategy() │
+ *                    │ + execute()     │
+ *                    └────────┬────────┘
+ *                             │ has
+ *                             ↓
+ *                    ┌─────────────────┐
+ *                    │Strategy Interface│
+ *                    ├─────────────────┤
+ *                    │ + algorithm()   │
+ *                    └────────┬────────┘
+ *                             △
+ *                             │ implements
+ *            ┌────────────────┼────────────────┐
+ *            │                │                │
+ *     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+ *     │ConcreteStratA│ │ConcreteStratB│ │ConcreteStratC│
+ *     ├──────────────┤ ├──────────────┤ ├──────────────┤
+ *     │+ algorithm() │ │+ algorithm() │ │+ algorithm() │
+ *     └──────────────┘ └──────────────┘ └──────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW STRATEGY PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────
+ * 1. Create Strategy Interface
+ *    → Defines contract (e.g., calculatePrice, processPayment)
+ *
+ * 2. Create Concrete Strategy Classes
+ *    → RegularPricing, GoldPricing, PremiumPricing
+ *    → PayPalPayment, CreditCardPayment, BankTransferPayment
+ *
+ * 3. Create Context Class
+ *    → Product (for pricing), Checkout (for payment)
+ *    → Has a strategy property
+ *    → Has setStrategy() method
+ *    → Delegates work to strategy
+ *
+ * EXECUTION PHASE:
+ * ────────────────────────────
+ * 4. Client chooses strategy
+ *    → Based on user type, payment method, etc.
+ *
+ * 5. Client sets strategy in context
+ *    → product->setStrategy(new GoldPricing())
+ *    → checkout->setStrategy(new PayPalPayment())
+ *
+ * 6. Context executes using strategy
+ *    → product->getPrice()
+ *    → checkout->process()
+ *
+ * 7. Strategy does its specific work
+ *    → GoldPricing calculates 10% discount
+ *    → PayPalPayment processes with 2.9% + $0.30 fee
+ *
+ * 8. Result returned to client
+ *    → Final price, payment confirmation, etc.
+ *
+ * SWITCHING PHASE (runtime flexibility):
+ * ────────────────────────────
+ * 9. Client can change strategy anytime
+ *    → product->setStrategy(new PremiumPricing())
+ *    → checkout->setStrategy(new CreditCardPayment())
+ *
+ * 10. Context now uses new strategy
+ *     → Same method calls, different behavior!
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE STRATEGY INTERFACE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * A contract that all strategies must follow
+ *
+ * WHY USE IT?
+ * - Ensures all strategies have the same methods
+ * - Makes strategies interchangeable
+ * - Context can use any strategy without knowing details
+ * - Follows Dependency Inversion Principle
+ *
+ * EXAMPLE:
+ * interface PaymentStrategy {
+ *     public function processPayment(float $amount): array;
+ * }
+ *
+ * All payment strategies MUST implement this!
+ */
+
+/**
+ * KEY CONCEPT 2: CONCRETE STRATEGIES
+ * ──────────────────────────────
+ *
+ * WHAT ARE THEY?
+ * Different implementations of the strategy interface
+ *
+ * WHY MULTIPLE?
+ * Each handles the task differently:
+ * - RegularPricing: no discount
+ * - GoldPricing: 10% discount
+ * - PayPalPayment: 2.9% + $0.30 fee
+ * - CreditCardPayment: 2.5% + $0.25 fee
+ *
+ * KEY POINT:
+ * Same method signature, different implementation!
+ */
+
+/**
+ * KEY CONCEPT 3: THE CONTEXT
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The class that uses a strategy
+ *
+ * WHAT DOES IT DO?
+ * - Holds a reference to current strategy
+ * - Provides setStrategy() to switch strategies
+ * - Delegates work to the strategy
+ *
+ * WHAT DOESN'T IT DO?
+ * - Doesn't know how strategy works internally
+ * - Doesn't have if-else for different strategies
+ * - Doesn't implement algorithm itself
+ *
+ * EXAMPLE:
+ * class Product {
+ *     private PricingStrategy $strategy;
+ *
+ *     public function setStrategy(PricingStrategy $s) {
+ *         $this->strategy = $s;
+ *     }
+ *
+ *     public function getPrice() {
+ *         return $this->strategy->calculatePrice($basePrice);
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * A remote control that can work with different devices
+ */
+
+/**
+ * KEY CONCEPT 4: STRATEGY SWAPPING
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Changing the strategy at runtime
+ *
+ * WHY POWERFUL?
+ * - Same object, different behavior
+ * - No need to create new objects
+ * - Flexible and dynamic
+ *
+ * EXAMPLE:
+ * $product->setStrategy(new RegularPricing());
+ * $price1 = $product->getPrice(); // $1000
+ *
+ * $product->setStrategy(new PremiumPricing());
+ * $price2 = $product->getPrice(); // $800
+ *
+ * Same product, different prices!
+ */
+
+/**
+ * KEY CONCEPT 5: COMPOSITION OVER INHERITANCE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Strategy pattern uses composition (HAS-A) instead of inheritance (IS-A)
+ *
+ * WHY BETTER?
+ * - More flexible
+ * - Can change behavior at runtime
+ * - Avoids class explosion
+ *
+ * BAD (Inheritance):
+ * Product → RegularProduct → GoldProduct → PremiumProduct
+ *
+ * GOOD (Composition):
+ * Product HAS-A PricingStrategy
+ * - Can swap strategy anytime
+ * - One Product class works for all
+ */
