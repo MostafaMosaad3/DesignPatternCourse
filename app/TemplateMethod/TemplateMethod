@@ -1,0 +1,594 @@
+// ============================================
+// TEMPLATE METHOD DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS TEMPLATE METHOD PATTERN?
+ *
+ * The Template Method Pattern defines the skeleton of an algorithm in a base class,
+ * allowing subclasses to override specific steps without changing the algorithm's structure.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of making different types of coffee:
+ * - All coffee follows same steps: boil water → brew → pour → add condiments
+ * - Tea: boil water → steep tea bag → pour → add lemon
+ * - Coffee: boil water → brew coffee → pour → add sugar/milk
+ * - Hot chocolate: boil water → mix powder → pour → add marshmallows
+ * The PROCESS is the same, but DETAILS differ
+ *
+ * ANOTHER ANALOGY:
+ * Building houses:
+ * - All houses: lay foundation → build walls → add roof → interior
+ * - Wooden house: wood foundation → wood walls → shingle roof → wood interior
+ * - Brick house: concrete foundation → brick walls → tile roof → plaster interior
+ * Same STEPS, different IMPLEMENTATION
+ *
+ * MORE ANALOGIES:
+ * - Cooking recipes: Same steps, different ingredients
+ * - Manufacturing: Same assembly line, different products
+ * - Data processing: Read → Process → Validate → Save (always same order)
+ * - Game AI: Analyze → Decide → Execute (same flow, different logic)
+ *
+ * COMPONENTS:
+ * 1. Abstract Class: Defines the template method (algorithm skeleton)
+ * 2. Template Method: The main algorithm that calls other methods
+ * 3. Primitive Operations: Abstract methods that subclasses must implement
+ * 4. Hooks: Optional methods that subclasses can override
+ * 5. Concrete Classes: Implement the primitive operations
+ *
+ * WHEN TO USE:
+ * - Multiple classes share same algorithm structure but differ in details
+ * - Want to control the order of operations
+ * - Common behavior should be in one place (avoid duplication)
+ * - Want to enforce a specific workflow
+ * - Need to provide extension points without changing main algorithm
+ *
+ * WHEN NOT TO USE:
+ * - Algorithm steps vary significantly between implementations
+ * - Need flexibility in step order (Template Method fixes the order)
+ * - Only one or two implementations exist (overkill)
+ * - Steps are independent and can run in any order
+ *
+ * BENEFITS:
+ * ✅ Code Reuse: Common code in one place
+ * ✅ Control Flow: Parent class controls algorithm
+ * ✅ Easy Extension: Add new types without changing existing code
+ * ✅ Consistency: All implementations follow same structure
+ * ✅ Hollywood Principle: "Don't call us, we'll call you"
+ * ✅ Single Responsibility: Each class focuses on its specific implementation
+ * ✅ Open/Closed: Open for extension, closed for modification
+ *
+ * DRAWBACKS:
+ * ❌ Rigid structure: Can't change algorithm order
+ * ❌ More classes: Need subclass for each variation
+ * ❌ Can be harder to understand (logic split across classes)
+ * ❌ Liskov Substitution: Must ensure subclasses don't break contract
+ * ❌ Limited flexibility: Step order is fixed
+ */
+
+// ============================================
+// STRUCTURE OF TEMPLATE METHOD PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │      AbstractClass                      │
+ * ├─────────────────────────────────────────┤
+ * │ + templateMethod() {                    │
+ * │     step1()                             │
+ * │     step2()                             │
+ * │     step3()                             │
+ * │   }                                     │
+ * ├─────────────────────────────────────────┤
+ * │ # abstract step1()                      │
+ * │ # abstract step2()                      │
+ * │ # step3() // hook (optional)            │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ extends
+ *        ┌──────────┼──────────┐
+ *        │          │          │
+ * ┌──────────┐ ┌──────────┐ ┌──────────┐
+ * │ConcreteA │ │ConcreteB │ │ConcreteC │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │+step1()  │ │+step1()  │ │+step1()  │
+ * │+step2()  │ │+step2()  │ │+step2()  │
+ * │+step3()  │ │+step3()  │ │          │
+ * └──────────┘ └──────────┘ └──────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW TEMPLATE METHOD WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────────────────
+ * 1. Create AbstractClass with templateMethod()
+ *    → Defines algorithm structure
+ *
+ * 2. Define abstract methods (primitive operations)
+ *    → step1(), step2(), etc.
+ *
+ * 3. Optionally define hooks
+ *    → Methods with default implementation
+ *
+ * 4. Create ConcreteClass extending AbstractClass
+ *    → Implements abstract methods
+ *
+ * EXECUTION PHASE:
+ * ────────────────────────────────────────
+ * 5. Client calls templateMethod()
+ *    → concreteObject->templateMethod()
+ *
+ * 6. AbstractClass executes algorithm:
+ *    → step1() // calls ConcreteClass version
+ *    → step2() // calls ConcreteClass version
+ *    → step3() // calls hook or ConcreteClass version
+ *
+ * 7. Each step executes specific implementation
+ *    → ConcreteA->step1() // A's implementation
+ *    → ConcreteA->step2() // A's implementation
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Parent defines STRUCTURE
+ * - Children define DETAILS
+ * - Order is FIXED by parent
+ * - Children CANNOT change order
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: TEMPLATE METHOD
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * The main method that defines the algorithm skeleton
+ *
+ * CHARACTERISTICS:
+ * - Usually final (cannot be overridden)
+ * - Calls other methods in specific order
+ * - Lives in abstract class
+ * - Public (called by clients)
+ *
+ * EXAMPLE:
+ * final public function generateReport() {
+ *     $data = $this->readFile();
+ *     $extracted = $this->extractData($data);
+ *     $analyzed = $this->analyzeData($extracted);
+ *     return $this->generateOutput($analyzed);
+ * }
+ *
+ * WHY FINAL?
+ * - Prevents subclasses from changing algorithm
+ * - Ensures consistent behavior
+ * - Maintains control flow
+ */
+
+/**
+ * KEY CONCEPT 2: PRIMITIVE OPERATIONS
+ * ────────────────────────────────────────
+ *
+ * WHAT ARE THEY?
+ * Abstract methods that subclasses MUST implement
+ *
+ * CHARACTERISTICS:
+ * - Declared abstract in base class
+ * - No default implementation
+ * - Subclasses must override
+ * - Usually protected
+ *
+ * EXAMPLE:
+ * abstract protected function readFile(): array;
+ * abstract protected function extractData(array $data): array;
+ *
+ * PURPOSE:
+ * - Force subclasses to provide specific logic
+ * - Define customization points
+ * - Ensure required steps exist
+ */
+
+/**
+ * KEY CONCEPT 3: HOOKS
+ * ────────────────────────────────────────
+ *
+ * WHAT ARE THEY?
+ * Optional methods with default implementation
+ *
+ * CHARACTERISTICS:
+ * - Have default implementation (often empty)
+ * - Subclasses CAN override (not required)
+ * - Provide optional customization
+ * - Usually protected
+ *
+ * EXAMPLE:
+ * protected function beforeProcess(): void {
+ *     // Default: do nothing
+ * }
+ *
+ * protected function afterProcess(): void {
+ *     // Default: do nothing
+ * }
+ *
+ * WHEN TO USE:
+ * - Optional behavior
+ * - Pre/post processing
+ * - Logging, validation
+ * - Extension points
+ */
+
+/**
+ * KEY CONCEPT 4: HOLLYWOOD PRINCIPLE
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * "Don't call us, we'll call you"
+ *
+ * MEANING:
+ * - Parent class calls child methods
+ * - Child doesn't call parent's template method
+ * - Inversion of control
+ *
+ * EXAMPLE:
+ * // Parent calls child
+ * templateMethod() {
+ *     $this->step1(); // Parent calling child's implementation
+ * }
+ *
+ * // NOT this:
+ * class Child {
+ *     public function doWork() {
+ *         parent::templateMethod(); // Child calling parent
+ *     }
+ * }
+ */
+
+// ============================================
+// YOUR USE CASE: CV PROCESSING
+// ============================================
+
+/**
+ * CV PROCESSING EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Need to process different CV formats (PDF, DOCX, Image)
+ * - All formats follow same steps:
+ *   1. Read file
+ *   2. Extract data
+ *   3. Analyze data
+ *   4. Generate report
+ * - But each format requires different extraction logic
+ *
+ * SOLUTION WITH TEMPLATE METHOD:
+ *
+ * Abstract Class: CVReportGenerator
+ * Template Method: generateReport()
+ * Steps:
+ *   1. readFile() - abstract
+ *   2. extractData() - abstract
+ *   3. analyzeData() - common implementation
+ *   4. generateReport() - common implementation
+ *
+ * Concrete Classes:
+ * - PdfCVReportGenerator
+ * - DocxCVReportGenerator
+ * - ImageCVReportGenerator
+ *
+ * Each implements:
+ * - readFile() differently
+ * - extractData() differently
+ * - Shares analyzeData() and generateReport()
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: DATA IMPORT
+ * ────────────────────────────────────────
+ * Template: ImportData
+ * Steps: connect → fetch → transform → validate → save
+ * Variations:
+ * - CSVImport: read CSV file
+ * - APIImport: call API endpoint
+ * - DatabaseImport: query database
+ *
+ * EXAMPLE 2: PAYMENT PROCESSING
+ * ────────────────────────────────────────
+ * Template: ProcessPayment
+ * Steps: validate → authorize → charge → notify → log
+ * Variations:
+ * - StripePayment
+ * - PayPalPayment
+ * - CreditCardPayment
+ *
+ * EXAMPLE 3: AUTHENTICATION
+ * ────────────────────────────────────────
+ * Template: Authenticate
+ * Steps: validate → verify → createSession → log
+ * Variations:
+ * - DatabaseAuth
+ * - LDAPAuth
+ * - OAuth2Auth
+ *
+ * EXAMPLE 4: DOCUMENT GENERATION
+ * ────────────────────────────────────────
+ * Template: GenerateDocument
+ * Steps: collect data → format → render → save
+ * Variations:
+ * - PDFDocument
+ * - WordDocument
+ * - HTMLDocument
+ *
+ * EXAMPLE 5: DATA MIGRATION
+ * ────────────────────────────────────────
+ * Template: MigrateData
+ * Steps: backup → extract → transform → load → verify
+ * Variations:
+ * - MySQLMigration
+ * - PostgreSQLMigration
+ * - MongoDBMigration
+ */
+
+// ============================================
+// TEMPLATE METHOD IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL EXAMPLES
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Eloquent Model Events
+ * Laravel's Eloquent uses Template Method internally:
+ *
+ * - save() is the template method
+ * - Steps: beforeSave → performSave → afterSave
+ * - Hooks: creating, created, updating, updated
+ *
+ * EXAMPLE 2: Artisan Commands
+ * Command class uses Template Method:
+ *
+ * abstract class Command {
+ *     final public function run() {
+ *         $this->initialize();
+ *         $this->execute();
+ *         $this->terminate();
+ *     }
+ *
+ *     protected function initialize() {}
+ *     abstract protected function execute();
+ *     protected function terminate() {}
+ * }
+ *
+ * EXAMPLE 3: Jobs
+ * Job processing follows template:
+ *
+ * - handle() is called by queue system
+ * - Steps: setUp → process → cleanup
+ * - Hooks: before, after, failed
+ *
+ * EXAMPLE 4: Middleware
+ * Middleware pipeline is template-like:
+ *
+ * - handle() method
+ * - Steps: before → next → after
+ * - Each middleware implements its logic
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Making Template Method Final
+ * ────────────────────────────────────────
+ * PROBLEM: Subclasses can override and break algorithm
+ * SOLUTION: Make template method final
+ *
+ * MISTAKE 2: Too Many Steps
+ * ────────────────────────────────────────
+ * PROBLEM: Hard to understand, maintain
+ * SOLUTION: Keep steps reasonable (3-7 steps)
+ *
+ * MISTAKE 3: Steps Depend on Each Other
+ * ────────────────────────────────────────
+ * PROBLEM: Fragile, hard to test
+ * SOLUTION: Make steps independent when possible
+ *
+ * MISTAKE 4: Not Using Hooks
+ * ────────────────────────────────────────
+ * PROBLEM: Forcing subclasses to implement unnecessary methods
+ * SOLUTION: Use hooks for optional behavior
+ *
+ * MISTAKE 5: Public Primitive Operations
+ * ────────────────────────────────────────
+ * PROBLEM: Can be called directly, bypassing template
+ * SOLUTION: Make them protected
+ *
+ * MISTAKE 6: Overusing Pattern
+ * ────────────────────────────────────────
+ * PROBLEM: Unnecessary complexity for simple cases
+ * SOLUTION: Use only when you have 3+ similar implementations
+ *
+ * MISTAKE 7: Mutable State Between Steps
+ * ────────────────────────────────────────
+ * PROBLEM: Hard to track, debug, test
+ * SOLUTION: Pass data between steps via parameters/return values
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Steps Focused
+ * ────────────────────────────────────────
+ * Each step should do ONE thing
+ *
+ * BEST PRACTICE 2: Use Meaningful Names
+ * ────────────────────────────────────────
+ * Good: extractContactInfo(), validateEmail()
+ * Bad: step1(), process()
+ *
+ * BEST PRACTICE 3: Document the Algorithm
+ * ────────────────────────────────────────
+ * Explain the workflow in comments
+ *
+ * BEST PRACTICE 4: Make Template Method Final
+ * ────────────────────────────────────────
+ * Prevent subclasses from changing structure
+ *
+ * BEST PRACTICE 5: Use Type Hints
+ * ────────────────────────────────────────
+ * Specify parameter and return types
+ *
+ * BEST PRACTICE 6: Provide Hooks for Extension
+ * ────────────────────────────────────────
+ * beforeX(), afterX() methods with empty defaults
+ *
+ * BEST PRACTICE 7: Keep Template Class Abstract
+ * ────────────────────────────────────────
+ * Force usage through concrete implementations
+ *
+ * BEST PRACTICE 8: Test Each Concrete Class
+ * ────────────────────────────────────────
+ * Unit test each implementation separately
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * TEMPLATE METHOD vs STRATEGY
+ * ────────────────────────────────────────
+ * Template Method: Uses inheritance, algorithm in base class
+ * Strategy: Uses composition, algorithm in separate class
+ *
+ * When to use which?
+ * - Template Method: When structure is stable, details vary
+ * - Strategy: When entire algorithm needs to be swapped
+ *
+ * TEMPLATE METHOD vs FACTORY METHOD
+ * ────────────────────────────────────────
+ * Template Method: Controls algorithm flow
+ * Factory Method: Controls object creation
+ *
+ * Can be combined!
+ *
+ * TEMPLATE METHOD vs BRIDGE
+ * ────────────────────────────────────────
+ * Template Method: Single hierarchy, fixed structure
+ * Bridge: Two hierarchies, flexible composition
+ *
+ * TEMPLATE METHOD vs STATE
+ * ────────────────────────────────────────
+ * Template Method: Same structure, different implementations
+ * State: Different behavior based on state
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR TEMPLATE METHOD:
+ * ────────────────────────────────────────
+ *
+ * □ Identify common algorithm structure
+ * □ Create abstract base class
+ * □ Define template method (make it final)
+ * □ Identify steps that vary (make them abstract)
+ * □ Identify optional steps (make them hooks)
+ * □ Identify common steps (implement in base)
+ * □ Create concrete subclasses
+ * □ Implement abstract methods in each subclass
+ * □ Override hooks if needed
+ * □ Test each concrete class
+ * □ Document the algorithm flow
+ * □ Add type hints to all methods
+ * □ Make primitive operations protected
+ * □ Consider adding validation
+ * □ Handle errors gracefully
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Use Laravel collections where appropriate
+ * □ Inject dependencies via constructor
+ * □ Use Laravel's validation if needed
+ * □ Log important steps
+ * □ Consider queueing long operations
+ * □ Use proper namespacing
+ * □ Follow PSR standards
+ * □ Add PHPDoc blocks
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * TEMPLATE METHOD PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Define algorithm skeleton, let subclasses fill in details
+ *
+ * WHY: Code reuse, consistent structure, controlled flow
+ *
+ * WHEN: Multiple classes share same algorithm structure
+ *
+ * HOW:
+ * 1. Create abstract class with template method
+ * 2. Define abstract methods for varying steps
+ * 3. Define hooks for optional steps
+ * 4. Implement common logic in base class
+ * 5. Create concrete subclasses
+ * 6. Implement abstract methods
+ *
+ * COMPONENTS:
+ * - Abstract Class: Defines structure
+ * - Template Method: Main algorithm (final)
+ * - Primitive Operations: Abstract methods
+ * - Hooks: Optional methods
+ * - Concrete Classes: Specific implementations
+ *
+ * BENEFITS:
+ * ✅ Code reuse
+ * ✅ Consistent structure
+ * ✅ Easy to extend
+ * ✅ Control flow
+ * ✅ Single Responsibility
+ *
+ * KEY PRINCIPLE:
+ * "Don't call us, we'll call you"
+ * Parent controls flow, children provide details
+ *
+ * USE WHEN:
+ * ✅ Same steps, different implementation
+ * ✅ Need to enforce workflow
+ * ✅ 3+ similar implementations
+ * ✅ Want code reuse
+ *
+ * DON'T USE WHEN:
+ * ❌ Steps vary significantly
+ * ❌ Need flexible order
+ * ❌ Only 1-2 implementations
+ * ❌ Simple scenarios
+ *
+ * REMEMBER:
+ * - Structure is FIXED (parent controls)
+ * - Details are FLEXIBLE (children implement)
+ * - Order CANNOT change
+ * - Common code in ONE place
+ */

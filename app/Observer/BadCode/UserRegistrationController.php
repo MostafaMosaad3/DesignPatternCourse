@@ -2,10 +2,6 @@
 
 namespace App\Observer\BadCode;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-
 class UserRegistrationController
 {
     public function register(array $data)
