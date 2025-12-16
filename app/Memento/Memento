@@ -1,0 +1,635 @@
+// ============================================
+// MEMENTO DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS MEMENTO PATTERN?
+ *
+ * The Memento Pattern captures and stores an object's internal state
+ * so it can be restored later, WITHOUT violating encapsulation.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of video game save points:
+ * - Play game → Save game → Continue playing → Die → Load saved game
+ * - You restore to exact state: health, position, inventory, progress
+ * - The save file is the "memento"
+ * - You don't need to know HOW the game stores its state
+ *
+ * ANOTHER ANALOGY:
+ * Document editing:
+ * - Type text → Save version → Type more → Don't like it → Undo
+ * - Ctrl+Z restores previous state
+ * - Each version is a memento
+ * - You can undo multiple times (multiple mementos)
+ *
+ * MORE ANALOGIES:
+ * - Photo editing: Edit → Save history → Undo to previous edit
+ * - Database transactions: Begin → Changes → Rollback to savepoint
+ * - Version control (Git): Commit → Work → Reset to previous commit
+ * - Browser history: Visit pages → Go back to previous page
+ *
+ * COMPONENTS:
+ * 1. Originator: Object whose state needs to be saved
+ * 2. Memento: Stores the state of Originator
+ * 3. Caretaker: Manages mementos (saves and restores)
+ *
+ * WHEN TO USE:
+ * - Need undo/redo functionality
+ * - Need to save/restore object state
+ * - Need history/snapshots
+ * - Need rollback capability
+ * - Don't want to expose object's internal structure
+ * - Need to save checkpoints
+ *
+ * WHEN NOT TO USE:
+ * - State is simple (just save it directly)
+ * - State is huge (memory concerns)
+ * - Don't need history (just current state)
+ * - State changes very frequently (too many mementos)
+ *
+ * BENEFITS:
+ * ✅ Encapsulation: Internal state stays private
+ * ✅ Undo/Redo: Easy to implement
+ * ✅ History: Keep multiple states
+ * ✅ Snapshots: Save at any point
+ * ✅ Rollback: Return to previous state
+ * ✅ Single Responsibility: Caretaker manages history
+ * ✅ Easy to test: Can verify state restoration
+ *
+ * DRAWBACKS:
+ * ❌ Memory usage: Each memento stores full state
+ * ❌ Can be expensive if state is large
+ * ❌ Maintenance: Need to update if state changes
+ * ❌ Caretaker must track lifecycle
+ * ❌ Can be overkill for simple cases
+ */
+
+// ============================================
+// STRUCTURE OF MEMENTO PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │          Originator                     │
+ * ├─────────────────────────────────────────┤
+ * │ - state                                 │
+ * ├─────────────────────────────────────────┤
+ * │ + setState(state)                       │
+ * │ + save(): Memento                       │
+ * │ + restore(Memento)                      │
+ * └─────────────────────────────────────────┘
+ *                   │
+ *                   │ creates
+ *                   ↓
+ * ┌─────────────────────────────────────────┐
+ * │          Memento                        │
+ * ├─────────────────────────────────────────┤
+ * │ - state                                 │
+ * ├─────────────────────────────────────────┤
+ * │ + getState(): state                     │
+ * └─────────────────────────────────────────┘
+ *                   │
+ *                   │ manages
+ *                   ↓
+ * ┌─────────────────────────────────────────┐
+ * │          Caretaker                      │
+ * ├─────────────────────────────────────────┤
+ * │ - mementos: Array                       │
+ * ├─────────────────────────────────────────┤
+ * │ + save(Memento)                         │
+ * │ + undo(): Memento                       │
+ * │ + redo(): Memento                       │
+ * └─────────────────────────────────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW MEMENTO PATTERN WORKS - STEP BY STEP:
+ *
+ * INITIAL STATE:
+ * ────────────────────────────────────────
+ * 1. Create Originator (e.g., TextEditor)
+ *    → Has state: text = ""
+ *
+ * 2. Create Caretaker (e.g., History)
+ *    → Has empty history: []
+ *
+ * MAKING CHANGES AND SAVING:
+ * ────────────────────────────────────────
+ * 3. User types "Hello"
+ *    → Originator.state = "Hello"
+ *
+ * 4. Save state
+ *    → memento = Originator.save()
+ *    → memento contains: "Hello"
+ *    → Caretaker.save(memento)
+ *    → History: [memento1]
+ *
+ * 5. User types " World"
+ *    → Originator.state = "Hello World"
+ *
+ * 6. Save state again
+ *    → memento = Originator.save()
+ *    → memento contains: "Hello World"
+ *    → Caretaker.save(memento)
+ *    → History: [memento1, memento2]
+ *
+ * UNDO OPERATION:
+ * ────────────────────────────────────────
+ * 7. User presses Ctrl+Z (undo)
+ *    → memento = Caretaker.undo()
+ *    → Get memento1 from history
+ *    → Originator.restore(memento1)
+ *    → Originator.state = "Hello"
+ *
+ * REDO OPERATION:
+ * ────────────────────────────────────────
+ * 8. User presses Ctrl+Y (redo)
+ *    → memento = Caretaker.redo()
+ *    → Get memento2 from history
+ *    → Originator.restore(memento2)
+ *    → Originator.state = "Hello World"
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE ORIGINATOR
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * The object whose state needs to be saved and restored
+ *
+ * RESPONSIBILITIES:
+ * - Maintains internal state
+ * - Creates mementos containing state snapshot
+ * - Restores state from memento
+ *
+ * WHAT IT KNOWS:
+ * - Its own internal state
+ * - How to create memento
+ * - How to restore from memento
+ *
+ * WHAT IT DOESN'T KNOW:
+ * - Where mementos are stored
+ * - How many mementos exist
+ * - When to save/restore
+ *
+ * EXAMPLE (Text Editor):
+ * class TextEditor {
+ *     private $text;
+ *
+ *     public function save() {
+ *         return new Memento($this->text);
+ *     }
+ *
+ *     public function restore(Memento $m) {
+ *         $this->text = $m->getState();
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 2: THE MEMENTO
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * A snapshot of Originator's state at a specific time
+ *
+ * CHARACTERISTICS:
+ * - Immutable (cannot change after creation)
+ * - Stores complete state
+ * - Private (only Originator accesses state)
+ * - Opaque to Caretaker (Caretaker can't read it)
+ *
+ * WHAT IT CONTAINS:
+ * - Copy of Originator's state
+ * - Timestamp (optional)
+ * - Description (optional)
+ *
+ * EXAMPLE:
+ * class Memento {
+ *     private $state;
+ *     private $date;
+ *
+ *     public function __construct($state) {
+ *         $this->state = $state;
+ *         $this->date = date('Y-m-d H:i:s');
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 3: THE CARETAKER
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Manager of mementos (history keeper)
+ *
+ * RESPONSIBILITIES:
+ * - Store mementos
+ * - Manage history (stack/list)
+ * - Provide undo/redo operations
+ * - Track current position in history
+ *
+ * WHAT IT KNOWS:
+ * - List of mementos
+ * - Current position
+ * - When to save
+ *
+ * WHAT IT DOESN'T KNOW:
+ * - What's inside mementos
+ * - How to create mementos
+ * - Originator's internal structure
+ *
+ * EXAMPLE (History):
+ * class History {
+ *     private $mementos = [];
+ *     private $current = -1;
+ *
+ *     public function save($memento) {
+ *         $this->mementos[] = $memento;
+ *         $this->current++;
+ *     }
+ *
+ *     public function undo() {
+ *         return $this->mementos[--$this->current];
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 4: ENCAPSULATION
+ * ────────────────────────────────────────
+ *
+ * WHY IT MATTERS?
+ * Memento keeps internal state private while allowing save/restore
+ *
+ * HOW IT WORKS:
+ * - Originator can read memento (friend access)
+ * - Caretaker can store memento (opaque object)
+ * - External code cannot modify memento
+ *
+ * EXAMPLE:
+ * // Caretaker stores memento but can't read it
+ * $memento = $editor->save();
+ * $history->push($memento);
+ *
+ * // Caretaker can't do this:
+ * $state = $memento->getState(); // ❌ Private!
+ *
+ * // Only Originator can:
+ * $editor->restore($memento); // ✅ Has access
+ */
+
+// ============================================
+// YOUR USE CASE: TEXT EDITOR
+// ============================================
+
+/**
+ * TEXT EDITOR UNDO/REDO EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Text editor needs undo/redo
+ * - Must save text state at different points
+ * - Should support multiple undo levels
+ * - User can undo, then make new changes (branching)
+ *
+ * SOLUTION WITH MEMENTO:
+ *
+ * Originator: TextEditor
+ * - Has text state
+ * - Can save() current text
+ * - Can restore(memento) previous text
+ *
+ * Memento: EditorMemento
+ * - Stores text snapshot
+ * - Stores timestamp
+ * - Immutable
+ *
+ * Caretaker: History
+ * - Stores list of mementos
+ * - Manages undo stack
+ * - Manages redo stack
+ * - Tracks current position
+ *
+ * OPERATIONS:
+ * - Type text → Auto-save memento
+ * - Ctrl+Z → Undo (restore previous memento)
+ * - Ctrl+Y → Redo (restore next memento)
+ * - New edit after undo → Clear redo stack
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: TEXT EDITORS
+ * ────────────────────────────────────────
+ * Originator: Document
+ * Memento: DocumentState
+ * Caretaker: UndoManager
+ * Use: Undo/Redo edits, formatting changes
+ *
+ * EXAMPLE 2: GRAPHICS EDITORS
+ * ────────────────────────────────────────
+ * Originator: Canvas
+ * Memento: CanvasSnapshot
+ * Caretaker: HistoryPanel
+ * Use: Undo brush strokes, filters, transformations
+ *
+ * EXAMPLE 3: GAMES
+ * ────────────────────────────────────────
+ * Originator: GameState
+ * Memento: SavePoint
+ * Caretaker: SaveManager
+ * Use: Save game, load game, checkpoints
+ *
+ * EXAMPLE 4: DATABASE TRANSACTIONS
+ * ────────────────────────────────────────
+ * Originator: Transaction
+ * Memento: Savepoint
+ * Caretaker: TransactionManager
+ * Use: Rollback, commit, nested transactions
+ *
+ * EXAMPLE 5: FORM WIZARDS
+ * ────────────────────────────────────────
+ * Originator: WizardForm
+ * Memento: StepState
+ * Caretaker: WizardNavigator
+ * Use: Go back to previous step, keep form data
+ */
+
+// ============================================
+// MEMENTO PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Eloquent Model Versions
+ *
+ * use App\Models\Document;
+ *
+ * class Document extends Model {
+ *     public function saveVersion() {
+ *         return DocumentVersion::create([
+ *             'document_id' => $this->id,
+ *             'content' => $this->content,
+ *             'created_at' => now()
+ *         ]);
+ *     }
+ *
+ *     public function restoreVersion($versionId) {
+ *         $version = DocumentVersion::find($versionId);
+ *         $this->content = $version->content;
+ *         $this->save();
+ *     }
+ * }
+ *
+ * EXAMPLE 2: Session State
+ *
+ * // Save state
+ * session(['wizard_step_1' => $data]);
+ *
+ * // Restore state
+ * $data = session('wizard_step_1');
+ *
+ * EXAMPLE 3: Cache for State
+ *
+ * // Save
+ * Cache::put('editor_state_' . $userId, $state, 3600);
+ *
+ * // Restore
+ * $state = Cache::get('editor_state_' . $userId);
+ *
+ * EXAMPLE 4: Database Audit Trail
+ *
+ * class Order extends Model {
+ *     protected static function booted() {
+ *         static::updated(function ($order) {
+ *             OrderHistory::create([
+ *                 'order_id' => $order->id,
+ *                 'state' => $order->toArray()
+ *             ]);
+ *         });
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Making Memento Mutable
+ * ────────────────────────────────────────
+ * PROBLEM: State can change after save
+ * SOLUTION: Make memento immutable
+ *
+ * MISTAKE 2: Storing Too Many Mementos
+ * ────────────────────────────────────────
+ * PROBLEM: Memory overflow
+ * SOLUTION: Limit history size, remove old mementos
+ *
+ * MISTAKE 3: Exposing Memento State
+ * ────────────────────────────────────────
+ * PROBLEM: Breaks encapsulation
+ * SOLUTION: Keep state private, only Originator accesses
+ *
+ * MISTAKE 4: Not Clearing Redo Stack
+ * ────────────────────────────────────────
+ * PROBLEM: Redo after new edit causes confusion
+ * SOLUTION: Clear redo stack on new edit
+ *
+ * MISTAKE 5: Saving on Every Change
+ * ────────────────────────────────────────
+ * PROBLEM: Too many mementos (every keystroke)
+ * SOLUTION: Debounce saves, save on significant changes
+ *
+ * MISTAKE 6: Deep Copy Issues
+ * ────────────────────────────────────────
+ * PROBLEM: Memento references original (not copy)
+ * SOLUTION: Use clone or serialize/unserialize
+ *
+ * MISTAKE 7: Not Handling Undo/Redo Limits
+ * ────────────────────────────────────────
+ * PROBLEM: Crash when undo/redo at boundaries
+ * SOLUTION: Check if undo/redo available before operation
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Limit History Size
+ * ────────────────────────────────────────
+ * Keep only last N mementos (e.g., 20)
+ * Remove oldest when limit reached
+ *
+ * BEST PRACTICE 2: Immutable Mementos
+ * ────────────────────────────────────────
+ * No setters, only getters
+ * Final properties
+ *
+ * BEST PRACTICE 3: Meaningful Names
+ * ────────────────────────────────────────
+ * Good: EditorMemento, DocumentSnapshot
+ * Bad: Memento1, State
+ *
+ * BEST PRACTICE 4: Timestamp Mementos
+ * ────────────────────────────────────────
+ * Add creation time
+ * Useful for debugging and UI
+ *
+ * BEST PRACTICE 5: Compress Large States
+ * ────────────────────────────────────────
+ * If state is huge, compress before storing
+ * Use gzip or similar
+ *
+ * BEST PRACTICE 6: Delta Storage
+ * ────────────────────────────────────────
+ * Instead of full state, store changes only
+ * Saves memory for similar states
+ *
+ * BEST PRACTICE 7: Clone Deep Objects
+ * ────────────────────────────────────────
+ * Use deep copy, not reference
+ * serialize/unserialize or clone
+ *
+ * BEST PRACTICE 8: Provide Undo/Redo Status
+ * ────────────────────────────────────────
+ * canUndo(), canRedo() methods
+ * Helps UI enable/disable buttons
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * MEMENTO vs COMMAND
+ * ────────────────────────────────────────
+ * Memento: Saves object state
+ * Command: Encapsulates operations
+ * Can combine: Command stores memento for undo
+ *
+ * MEMENTO vs PROTOTYPE
+ * ────────────────────────────────────────
+ * Memento: Saves state for restore
+ * Prototype: Creates copy for new object
+ * Similar: Both involve copying
+ *
+ * MEMENTO vs STATE
+ * ────────────────────────────────────────
+ * Memento: External state management
+ * State: Object changes its behavior based on state
+ *
+ * MEMENTO vs SNAPSHOT (Repository)
+ * ────────────────────────────────────────
+ * Memento: In-memory state
+ * Snapshot: Often persistent (database)
+ * Similar concept, different implementation
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR MEMENTO PATTERN:
+ * ────────────────────────────────────────
+ *
+ * □ Identify Originator (object to save)
+ * □ Create Memento class
+ * □ Make Memento immutable
+ * □ Add save() method to Originator
+ * □ Add restore() method to Originator
+ * □ Create Caretaker class
+ * □ Add history storage to Caretaker
+ * □ Implement undo() in Caretaker
+ * □ Implement redo() in Caretaker
+ * □ Add canUndo() / canRedo() checks
+ * □ Limit history size
+ * □ Clear redo on new edit
+ * □ Test undo/redo operations
+ * □ Handle edge cases (empty history)
+ * □ Add timestamps if needed
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Consider using Eloquent for persistence
+ * □ Use sessions for temporary state
+ * □ Use cache for performance
+ * □ Add database migrations if persisting
+ * □ Use serialization for complex objects
+ * □ Consider queueing for large states
+ * □ Add proper namespacing
+ * □ Write tests for state restoration
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * MEMENTO PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Save and restore object state without breaking encapsulation
+ *
+ * WHY: Undo/Redo, History, Snapshots, Rollback
+ *
+ * WHEN: Need to restore previous states
+ *
+ * HOW:
+ * 1. Originator creates Memento with current state
+ * 2. Caretaker stores Memento
+ * 3. Later, Caretaker gives Memento back
+ * 4. Originator restores state from Memento
+ *
+ * COMPONENTS:
+ * - Originator: Object with state to save
+ * - Memento: State snapshot (immutable)
+ * - Caretaker: History manager
+ *
+ * BENEFITS:
+ * ✅ Encapsulation preserved
+ * ✅ Easy undo/redo
+ * ✅ History tracking
+ * ✅ Rollback capability
+ *
+ * USE WHEN:
+ * ✅ Need undo/redo
+ * ✅ Need snapshots
+ * ✅ Need to restore state
+ * ✅ Multiple history levels
+ *
+ * DON'T USE WHEN:
+ * ❌ State is simple
+ * ❌ State is huge (memory)
+ * ❌ No need for history
+ * ❌ Frequent changes
+ *
+ * KEY PRINCIPLE:
+ * "Save now, restore later, without exposing internals"
+ *
+ * REMEMBER:
+ * - Memento is IMMUTABLE
+ * - Caretaker CANNOT read memento
+ * - Only Originator accesses state
+ * - Limit history size
+ * - Clear redo on new edit
+ */
