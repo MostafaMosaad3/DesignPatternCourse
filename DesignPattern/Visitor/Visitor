@@ -1,0 +1,587 @@
+// ============================================
+// VISITOR DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS VISITOR PATTERN?
+ *
+ * The Visitor Pattern lets you add new operations to existing classes
+ * WITHOUT modifying those classes. It separates algorithms from the objects
+ * they operate on.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a hospital with different patients:
+ * - Doctor visits patients: checks vitals, diagnoses
+ * - Insurance agent visits same patients: calculates coverage
+ * - Accountant visits same patients: generates bills
+ * Same patients, different operations, NO changes to Patient class!
+ *
+ * ANOTHER ANALOGY:
+ * Shopping mall with different stores:
+ * - Tax inspector visits: calculates taxes
+ * - Fire inspector visits: checks safety
+ * - Health inspector visits: checks hygiene
+ * Same stores, different inspections, stores don't change!
+ *
+ * MORE ANALOGIES:
+ * - Zoo animals: Vet visits (treats), Trainer visits (trains), Cleaner visits (cleans)
+ * - Documents: PrinterVisitor, ExporterVisitor, ValidatorVisitor
+ * - File system: SizeCalculator, PermissionChecker, SearchVisitor
+ * - Shapes: AreaCalculator, PerimeterCalculator, Renderer
+ *
+ * COMPONENTS:
+ * 1. Visitor Interface: Defines visit methods for each element type
+ * 2. Concrete Visitor: Implements operations for each element
+ * 3. Element Interface: Defines accept(visitor) method
+ * 4. Concrete Element: Implements accept() to call visitor
+ *
+ * WHEN TO USE:
+ * - Need to add operations to existing classes WITHOUT modifying them
+ * - Have stable class structure but operations change frequently
+ * - Want to separate algorithm from object structure
+ * - Need to perform many unrelated operations on objects
+ * - Classes are in production and can't be changed
+ * - Want to keep related operations together
+ *
+ * WHEN NOT TO USE:
+ * - Class structure changes frequently (adding new types is hard)
+ * - Only a few operations needed
+ * - Operations are tightly coupled to classes
+ * - Can easily modify existing classes
+ *
+ * BENEFITS:
+ * ✅ Open/Closed Principle: Add operations without modifying classes
+ * ✅ Single Responsibility: Operations grouped in visitors
+ * ✅ Easy to add new operations: Just create new visitor
+ * ✅ Related operations together: All logic in one visitor class
+ * ✅ Can accumulate state: Visitor stores state across elements
+ * ✅ Type safety: Compiler ensures correct types
+ * ✅ Production-safe: No changes to existing code
+ *
+ * DRAWBACKS:
+ * ❌ Adding new element types is hard (must update all visitors)
+ * ❌ Breaks encapsulation: Visitor needs access to element internals
+ * ❌ More complex: Additional indirection
+ * ❌ Circular dependency: Elements know visitors, visitors know elements
+ * ❌ Not intuitive: Double dispatch can be confusing
+ */
+
+// ============================================
+// STRUCTURE OF VISITOR PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Visitor Interface                 │
+ * ├─────────────────────────────────────────┤
+ * │ + visitElementA(ElementA)               │
+ * │ + visitElementB(ElementB)               │
+ * │ + visitElementC(ElementC)               │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┼──────────┐
+ *        │          │          │
+ * ┌──────────┐ ┌──────────┐ ┌──────────┐
+ * │Visitor 1 │ │Visitor 2 │ │Visitor 3 │
+ * └──────────┘ └──────────┘ └──────────┘
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Element Interface                 │
+ * ├─────────────────────────────────────────┤
+ * │ + accept(Visitor)                       │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┼──────────┐
+ *        │          │          │
+ * ┌──────────┐ ┌──────────┐ ┌──────────┐
+ * │Element A │ │Element B │ │Element C │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │+accept() │ │+accept() │ │+accept() │
+ * └──────────┘ └──────────┘ └──────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW VISITOR PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────────────────
+ * 1. Define Element interface with accept(visitor)
+ * 2. Create concrete elements (DayShift, NightShift, RemoteWork)
+ * 3. Define Visitor interface with visit methods for each element
+ * 4. Create concrete visitors (ReportGenerator, OvertimeCalculator)
+ *
+ * EXECUTION PHASE (DOUBLE DISPATCH):
+ * ────────────────────────────────────────
+ * 5. Client creates visitor
+ *    → $visitor = new ReportGenerator()
+ *
+ * 6. Client calls element.accept(visitor)
+ *    → $dayShift->accept($visitor)
+ *
+ * 7. Element calls visitor.visitX(this)
+ *    → inside accept(): $visitor->visitDayShift($this)
+ *
+ * 8. Visitor performs operation on element
+ *    → inside visitDayShift(): generate report for day shift
+ *
+ * 9. Repeat for each element
+ *    → Same visitor visits all shifts
+ *
+ * KEY CONCEPT - DOUBLE DISPATCH:
+ * ────────────────────────────────────────
+ * - First dispatch: element.accept(visitor) → chooses element type
+ * - Second dispatch: visitor.visitX(element) → chooses visitor type
+ * - Result: Right method for right element and visitor combination
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE VISITOR
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * An object that performs operations on elements
+ *
+ * CHARACTERISTICS:
+ * - Has visit method for EACH element type
+ * - Contains the algorithm/operation logic
+ * - Can maintain state across visits
+ * - Knows about element types
+ *
+ * EXAMPLE:
+ * interface ScheduleVisitor {
+ *     public function visitDayShift(DayShift $shift);
+ *     public function visitNightShift(NightShift $shift);
+ *     public function visitRemoteWork(RemoteWork $work);
+ * }
+ *
+ * WHY MULTIPLE METHODS?
+ * - Each element type might need different handling
+ * - Type-safe: Compiler ensures correct types
+ * - Clear: Explicit method for each type
+ */
+
+/**
+ * KEY CONCEPT 2: THE ELEMENT
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * An object that accepts visitors to perform operations
+ *
+ * CHARACTERISTICS:
+ * - Has accept(visitor) method
+ * - Calls appropriate visitor method
+ * - Provides access to its data
+ * - Doesn't know what visitor does
+ *
+ * EXAMPLE:
+ * interface Schedule {
+ *     public function accept(ScheduleVisitor $visitor);
+ * }
+ *
+ * class DayShift implements Schedule {
+ *     public function accept(ScheduleVisitor $visitor) {
+ *         $visitor->visitDayShift($this);
+ *     }
+ * }
+ *
+ * WHY ACCEPT METHOD?
+ * - Enables double dispatch
+ * - Element chooses its visit method
+ * - Separates structure from operations
+ */
+
+/**
+ * KEY CONCEPT 3: DOUBLE DISPATCH
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * A technique where method call depends on TWO object types
+ *
+ * HOW IT WORKS:
+ * 1. Client → element.accept(visitor)
+ * 2. Element → visitor.visitX(this)
+ * 3. Result: Right combination of element + visitor
+ *
+ * EXAMPLE FLOW:
+ * $dayShift->accept($reportVisitor)
+ *   ↓
+ * $reportVisitor->visitDayShift($dayShift)
+ *   ↓
+ * Generate report for day shift specifically
+ *
+ * WHY NEEDED?
+ * - PHP doesn't support method overloading
+ * - Need to choose method based on element type
+ * - Visitor pattern uses double dispatch to achieve this
+ */
+
+/**
+ * KEY CONCEPT 4: OPEN/CLOSED PRINCIPLE
+ * ────────────────────────────────────────
+ *
+ * HOW VISITOR ACHIEVES IT:
+ * - Classes are CLOSED for modification (don't change)
+ * - Classes are OPEN for extension (add new visitors)
+ *
+ * EXAMPLE:
+ * Want to add "leave request management"?
+ * - Create LeaveRequestVisitor
+ * - Implement visit methods
+ * - NO changes to DayShift, NightShift, RemoteWork!
+ *
+ * PRODUCTION SCENARIO:
+ * - Schedules in production, can't change
+ * - Need new feature: leave requests
+ * - Solution: Create new visitor
+ * - Zero risk to existing code!
+ */
+
+// ============================================
+// YOUR USE CASE: SCHEDULE MANAGEMENT
+// ============================================
+
+/**
+ * SCHEDULE MANAGEMENT EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Have different schedule types (Day, Night, Remote)
+ * - Need multiple operations: reports, overtime, leave requests
+ * - Schedules in production, can't modify
+ * - Operations might change/grow
+ *
+ * SOLUTION WITH VISITOR:
+ *
+ * Elements (Schedules):
+ * - DayShift: 9 AM - 5 PM
+ * - NightShift: 10 PM - 6 AM
+ * - RemoteWork: Flexible hours
+ *
+ * Visitors (Operations):
+ * - ReportGenerator: Creates reports for each schedule type
+ * - OvertimeCalculator: Calculates overtime differently per type
+ * - LeaveRequestManager: Handles leave requests per type
+ *
+ * BENEFITS:
+ * - Add new operation? Create new visitor (no changes to schedules)
+ * - Each visitor has all logic for one operation
+ * - Type-safe: Compiler ensures correct handling
+ * - Production-safe: No risk to existing schedule classes
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: DOCUMENT PROCESSING
+ * ────────────────────────────────────────
+ * Elements: PDFDocument, WordDocument, ExcelDocument
+ * Visitors:
+ * - PrintVisitor: Prints each document type
+ * - ExportVisitor: Exports to different formats
+ * - EncryptVisitor: Encrypts documents
+ *
+ * EXAMPLE 2: E-COMMERCE PRODUCTS
+ * ────────────────────────────────────────
+ * Elements: PhysicalProduct, DigitalProduct, ServiceProduct
+ * Visitors:
+ * - TaxCalculator: Different tax rules per type
+ * - ShippingCostCalculator: Only for physical
+ * - DiscountApplier: Different discounts
+ *
+ * EXAMPLE 3: ABSTRACT SYNTAX TREE
+ * ────────────────────────────────────────
+ * Elements: NumberNode, BinaryOpNode, VariableNode
+ * Visitors:
+ * - Evaluator: Evaluates expression
+ * - PrettyPrinter: Formats code
+ * - TypeChecker: Validates types
+ *
+ * EXAMPLE 4: FILE SYSTEM
+ * ────────────────────────────────────────
+ * Elements: File, Directory, Symlink
+ * Visitors:
+ * - SizeCalculator: Calculates total size
+ * - PermissionChecker: Validates access
+ * - SearchVisitor: Finds files
+ *
+ * EXAMPLE 5: INSURANCE SYSTEM
+ * ────────────────────────────────────────
+ * Elements: HealthPolicy, LifePolicy, AutoPolicy
+ * Visitors:
+ * - PremiumCalculator: Different formulas
+ * - ClaimProcessor: Different procedures
+ * - RenewalHandler: Different renewal rules
+ */
+
+// ============================================
+// VISITOR PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Eloquent Model Operations
+ *
+ * interface ModelVisitor {
+ *     public function visitUser(User $user);
+ *     public function visitPost(Post $post);
+ *     public function visitComment(Comment $comment);
+ * }
+ *
+ * class ExportVisitor implements ModelVisitor {
+ *     public function visitUser(User $user) {
+ *         return ['name' => $user->name, 'email' => $user->email];
+ *     }
+ *     // ... other visits
+ * }
+ *
+ * EXAMPLE 2: Form Field Rendering
+ *
+ * interface FieldVisitor {
+ *     public function visitTextField(TextField $field);
+ *     public function visitCheckbox(Checkbox $field);
+ * }
+ *
+ * class HTMLRenderer implements FieldVisitor {
+ *     public function visitTextField(TextField $field) {
+ *         return "<input type='text' name='{$field->name}' />";
+ *     }
+ * }
+ *
+ * EXAMPLE 3: Validation Rules
+ *
+ * interface RuleVisitor {
+ *     public function visitRequired(Required $rule);
+ *     public function visitEmail(Email $rule);
+ * }
+ *
+ * class ErrorMessageGenerator implements RuleVisitor {
+ *     public function visitRequired(Required $rule) {
+ *         return "The {$rule->field} field is required.";
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Using Interfaces
+ * ────────────────────────────────────────
+ * PROBLEM: Tight coupling, can't swap visitors
+ * SOLUTION: Always use Visitor and Element interfaces
+ *
+ * MISTAKE 2: Visitor Modifying Element State
+ * ────────────────────────────────────────
+ * PROBLEM: Side effects, hard to track
+ * SOLUTION: Visitors should READ, not WRITE (usually)
+ *
+ * MISTAKE 3: Too Many Element Types
+ * ────────────────────────────────────────
+ * PROBLEM: Visitor interface becomes huge
+ * SOLUTION: Limit element types or use different pattern
+ *
+ * MISTAKE 4: Forgetting to Update All Visitors
+ * ────────────────────────────────────────
+ * PROBLEM: When adding new element, must update ALL visitors
+ * SOLUTION: Use abstract visitor with default implementations
+ *
+ * MISTAKE 5: Circular Dependencies
+ * ────────────────────────────────────────
+ * PROBLEM: Element includes visitor, visitor includes element
+ * SOLUTION: Use interfaces to break dependency
+ *
+ * MISTAKE 6: Making Elements Too Complex
+ * ────────────────────────────────────────
+ * PROBLEM: Elements do too much, visitor can't work
+ * SOLUTION: Keep elements simple, data-focused
+ *
+ * MISTAKE 7: Wrong Pattern Choice
+ * ────────────────────────────────────────
+ * PROBLEM: Using visitor when strategy/command better
+ * SOLUTION: Use visitor only when structure stable, operations vary
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Elements Simple
+ * ────────────────────────────────────────
+ * Elements should be data containers
+ * Logic goes in visitors
+ *
+ * BEST PRACTICE 2: Use Descriptive Names
+ * ────────────────────────────────────────
+ * Good: ReportGeneratorVisitor, OvertimeCalculatorVisitor
+ * Bad: Visitor1, Handler
+ *
+ * BEST PRACTICE 3: Return Values from Visits
+ * ────────────────────────────────────────
+ * Visitors can return results
+ * Easier to use than storing state
+ *
+ * BEST PRACTICE 4: Provide Default Implementations
+ * ────────────────────────────────────────
+ * Abstract visitor with default visit methods
+ * Subclasses override only what they need
+ *
+ * BEST PRACTICE 5: Document What Visitors Do
+ * ────────────────────────────────────────
+ * Each visitor should have clear purpose
+ * Document expected behavior
+ *
+ * BEST PRACTICE 6: Use Type Hints
+ * ────────────────────────────────────────
+ * Specify exact element type in visit methods
+ * Type safety prevents errors
+ *
+ * BEST PRACTICE 7: Visitor Should Be Stateless (Usually)
+ * ────────────────────────────────────────
+ * Or at least minimize state
+ * Makes testing easier
+ *
+ * BEST PRACTICE 8: Consider Composite Pattern
+ * ────────────────────────────────────────
+ * Visitor works great with Composite
+ * Can traverse complex structures
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * VISITOR vs STRATEGY
+ * ────────────────────────────────────────
+ * Visitor: Multiple operations on multiple types
+ * Strategy: One operation with different algorithms
+ * Use Visitor: When types are stable, operations change
+ * Use Strategy: When algorithm varies, types don't
+ *
+ * VISITOR vs COMMAND
+ * ────────────────────────────────────────
+ * Visitor: Operations on existing objects
+ * Command: Encapsulates request as object
+ * Can combine: Commands can use visitors
+ *
+ * VISITOR vs ITERATOR
+ * ────────────────────────────────────────
+ * Visitor: Performs operations during traversal
+ * Iterator: Just traverses, doesn't operate
+ * Can combine: Use iterator to visit elements
+ *
+ * VISITOR vs DECORATOR
+ * ────────────────────────────────────────
+ * Visitor: External operations on objects
+ * Decorator: Adds behavior by wrapping
+ * Visitor: Better when can't modify classes
+ * Decorator: Better when extending single objects
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR VISITOR PATTERN:
+ * ────────────────────────────────────────
+ *
+ * □ Identify element types (stable classes)
+ * □ Identify operations (may change/grow)
+ * □ Create Element interface with accept()
+ * □ Create Concrete Elements implementing accept()
+ * □ Create Visitor interface with visit methods
+ * □ Create Concrete Visitors implementing operations
+ * □ In each element's accept(), call visitor.visitX(this)
+ * □ Implement logic in visitor's visit methods
+ * □ Test each visitor with all elements
+ * □ Document visitor purposes
+ * □ Consider default implementations
+ * □ Add type hints everywhere
+ * □ Test production safety (no element changes)
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Use Laravel collections where appropriate
+ * □ Inject visitors via service container
+ * □ Use proper namespacing
+ * □ Consider caching visitor results
+ * □ Add logging for operations
+ * □ Use Laravel validation if needed
+ * □ Follow PSR standards
+ * □ Write feature tests for each visitor
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * VISITOR PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Add operations to classes without modifying them
+ *
+ * WHY: Separate algorithms from objects, keep classes unchanged
+ *
+ * WHEN: Stable structure, varying operations, production code
+ *
+ * HOW:
+ * 1. Elements implement accept(visitor)
+ * 2. Visitor has visitX() for each element type
+ * 3. Element's accept() calls visitor.visitX(this)
+ * 4. Visitor performs operation
+ *
+ * COMPONENTS:
+ * - Visitor: Defines operations
+ * - Element: Accepts visitors
+ * - Double Dispatch: Chooses right method
+ *
+ * BENEFITS:
+ * ✅ Add operations without changing classes
+ * ✅ Related operations together
+ * ✅ Production-safe
+ * ✅ Type-safe
+ * ✅ Open/Closed principle
+ *
+ * USE WHEN:
+ * ✅ Classes in production
+ * ✅ Operations change frequently
+ * ✅ Multiple unrelated operations
+ * ✅ Stable class structure
+ *
+ * DON'T USE WHEN:
+ * ❌ Structure changes often
+ * ❌ Few operations
+ * ❌ Can easily modify classes
+ * ❌ Operations tightly coupled
+ *
+ * KEY PRINCIPLE:
+ * "Separate what changes (operations) from what stays (structure)"
+ *
+ * REMEMBER:
+ * - Double dispatch is KEY
+ * - Each element type needs visit method
+ * - Adding element = update all visitors
+ * - Adding operation = create new visitor
+ * - Production-safe way to extend
+ */
