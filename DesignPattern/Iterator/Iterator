@@ -1,0 +1,902 @@
+<?php
+
+// ============================================
+// ITERATOR DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS ITERATOR PATTERN?
+ *
+ * The Iterator Pattern provides a way to access elements of a collection
+ * sequentially WITHOUT exposing the underlying structure (array, tree, etc).
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a TV remote control:
+ * - Press "Next Channel" → Go to next channel
+ * - Press "Previous Channel" → Go to previous channel
+ * - You don't need to know HOW channels are stored internally
+ * - You just iterate through them one by one
+ *
+ * ANOTHER ANALOGY:
+ * Reading a book:
+ * - Turn page forward → Next page
+ * - Turn page backward → Previous page
+ * - You don't care if book is digital or paper
+ * - You just go through pages sequentially
+ *
+ * MORE ANALOGIES:
+ * - Music playlist: next(), previous(), hasNext()
+ * - Photo gallery: swipe to navigate, don't see internal storage
+ * - Restaurant menu: flip through pages, don't see database
+ * - File explorer: iterate through files, don't see file system details
+ *
+ * COMPONENTS:
+ * 1. Iterator Interface: Defines traversal methods (next, hasNext, current)
+ * 2. Concrete Iterator: Implements traversal for specific collection
+ * 3. Aggregate Interface: Defines method to get iterator
+ * 4. Concrete Aggregate: Returns iterator for its collection
+ *
+ * WHEN TO USE:
+ * - Need to traverse complex data structure (tree, graph, hierarchy)
+ * - Want to hide internal structure from client
+ * - Need multiple ways to traverse same collection
+ * - Want to provide uniform interface for different collections
+ * - Need to iterate without exposing implementation
+ * - Want to support multiple simultaneous traversals
+ *
+ * WHEN NOT TO USE:
+ * - Simple array that can use foreach directly
+ * - Only one way to traverse
+ * - Collection structure is simple and exposed anyway
+ * - Performance is critical (adds overhead)
+ *
+ * BENEFITS:
+ * ✅ Single Responsibility: Traversal logic separate from collection
+ * ✅ Encapsulation: Internal structure hidden
+ * ✅ Flexibility: Multiple iterators for same collection
+ * ✅ Uniform Interface: All collections traversed same way
+ * ✅ Multiple Traversals: Can have multiple iterators simultaneously
+ * ✅ Easy to add new traversal methods
+ * ✅ Follows Open/Closed Principle
+ *
+ * DRAWBACKS:
+ * ❌ Overkill for simple collections
+ * ❌ Adds complexity
+ * ❌ Performance overhead
+ * ❌ More classes to maintain
+ */
+
+// ============================================
+// STRUCTURE OF ITERATOR PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Iterator Interface                │
+ * ├─────────────────────────────────────────┤
+ * │ + hasNext(): bool                       │
+ * │ + next(): mixed                         │
+ * │ + current(): mixed                      │
+ * │ + reset(): void                         │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *                   │
+ * ┌─────────────────────────────────────────┐
+ * │    Concrete Iterator                    │
+ * ├─────────────────────────────────────────┤
+ * │ - collection                            │
+ * │ - position                              │
+ * ├─────────────────────────────────────────┤
+ * │ + hasNext(): bool                       │
+ * │ + next(): mixed                         │
+ * │ + current(): mixed                      │
+ * └─────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────┐
+ * │    Aggregate Interface                  │
+ * ├─────────────────────────────────────────┤
+ * │ + createIterator(): Iterator            │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *                   │
+ * ┌─────────────────────────────────────────┐
+ * │    Concrete Aggregate                   │
+ * ├─────────────────────────────────────────┤
+ * │ - items: Array                          │
+ * ├─────────────────────────────────────────┤
+ * │ + createIterator(): Iterator            │
+ * │ + add(item)                             │
+ * └─────────────────────────────────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW ITERATOR PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (happens once):
+ * ────────────────────────────────────────
+ * 1. Create collection (Aggregate)
+ *    → $employees = new EmployeeCollection()
+ *    → Has internal storage: []
+ *
+ * 2. Add items to collection
+ *    → $employees->add($ceo)
+ *    → $employees->add($manager)
+ *    → $employees->add($developer)
+ *    → Now internal storage: [$ceo, $manager, $developer]
+ *
+ * 3. Get iterator from collection
+ *    → $iterator = $employees->createIterator()
+ *    → Iterator created with: collection reference, position = 0
+ *
+ * ITERATION PHASE (traverse elements):
+ * ────────────────────────────────────────
+ * 4. Check if has next element
+ *    → $iterator->hasNext()
+ *    → Returns: position < count (0 < 3) = true
+ *
+ * 5. Get current element (optional)
+ *    → $employee = $iterator->current()
+ *    → Returns: element at position 0 ($ceo)
+ *    → Position still: 0
+ *
+ * 6. Move to next element
+ *    → $iterator->next()
+ *    → Returns: element at position 0 ($ceo)
+ *    → Position now: 1
+ *
+ * 7. Check again
+ *    → $iterator->hasNext()
+ *    → Returns: 1 < 3 = true
+ *
+ * 8. Get next element
+ *    → $iterator->next()
+ *    → Returns: element at position 1 ($manager)
+ *    → Position now: 2
+ *
+ * 9. Continue until end
+ *    → $iterator->next() → $developer
+ *    → Position now: 3
+ *    → $iterator->hasNext() → 3 < 3 = false
+ *
+ * 10. Iteration complete!
+ *
+ * RESET PHASE (optional):
+ * ────────────────────────────────────────
+ * 11. Reset to start
+ *     → $iterator->reset()
+ *     → Position now: 0
+ *     → Can iterate again!
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Client uses iterator, not collection directly
+ * - Iterator knows how to traverse collection
+ * - Collection structure hidden from client
+ * - Can have multiple iterators on same collection
+ * - Each iterator maintains its own position
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE ITERATOR
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * An object that knows how to traverse a collection
+ *
+ * WHAT DOES IT DO?
+ * - Maintains current position in collection
+ * - Provides methods to move through elements
+ * - Returns elements one by one
+ * - Knows when collection is exhausted
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't modify the collection
+ * - Doesn't know about collection's storage details
+ * - Doesn't care about other iterators
+ *
+ * CORE METHODS:
+ * - hasNext(): Are there more elements?
+ * - next(): Move to next element and return it
+ * - current(): Get current element without moving
+ * - reset(): Go back to start
+ *
+ * CHARACTERISTICS:
+ * - Maintains position/state
+ * - Knows traversal logic
+ * - Independent from collection
+ * - Lightweight object
+ *
+ * THINK OF IT AS:
+ * A cursor or pointer moving through data
+ */
+
+/**
+ * KEY CONCEPT 2: THE AGGREGATE (COLLECTION)
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * The collection that holds elements
+ *
+ * WHAT DOES IT DO?
+ * - Stores elements internally
+ * - Creates iterators on demand
+ * - Provides access to data (to iterator only)
+ * - Manages the collection
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't implement traversal logic
+ * - Doesn't expose internal structure
+ * - Doesn't track iterator positions
+ *
+ * KEY METHOD:
+ * - createIterator(): Returns iterator for this collection
+ *
+ * RESPONSIBILITIES:
+ * - Store elements
+ * - Create iterators
+ * - Provide access to data (to iterator only)
+ *
+ * THINK OF IT AS:
+ * A container that can produce navigators
+ *
+ * WHY SEPARATE?
+ * - Collection focuses on storage
+ * - Iterator focuses on traversal
+ * - Single Responsibility Principle
+ * - Can change one without affecting other
+ */
+
+/**
+ * KEY CONCEPT 3: THE INTERFACE
+ * ────────────────────────────────────────
+ *
+ * WHY USE ITERATOR INTERFACE?
+ * - Ensures all iterators have standard methods
+ * - Makes iterators interchangeable
+ * - Client can use any iterator the same way
+ * - Follows Dependency Inversion Principle
+ *
+ * STANDARD METHODS:
+ * interface Iterator {
+ *     public function hasNext(): bool;
+ *     public function next(): mixed;
+ *     public function current(): mixed;
+ *     public function reset(): void;
+ * }
+ *
+ * WHY USE AGGREGATE INTERFACE?
+ * - Ensures all collections can provide iterators
+ * - Makes collections interchangeable
+ * - Client knows every collection has createIterator()
+ *
+ * STANDARD METHOD:
+ * interface IterableCollection {
+ *     public function createIterator(): Iterator;
+ * }
+ */
+
+/**
+ * KEY CONCEPT 4: INTERNAL VS EXTERNAL ITERATOR
+ * ────────────────────────────────────────
+ *
+ * EXTERNAL ITERATOR (Most Common):
+ * Client controls iteration:
+ *
+ * while ($iterator->hasNext()) {
+ *     $item = $iterator->next();
+ *     // Do something with item
+ *     // Client decides when to continue
+ * }
+ *
+ * Benefits:
+ * ✅ More control (can break early)
+ * ✅ Can process conditionally
+ * ✅ Explicit flow
+ *
+ * INTERNAL ITERATOR:
+ * Iterator controls iteration:
+ *
+ * $iterator->forEach(function($item) {
+ *     // Do something with item
+ *     // Iterator controls the loop
+ * });
+ *
+ * Benefits:
+ * ✅ Simpler to use
+ * ✅ Less code
+ * ✅ Cleaner syntax
+ *
+ * WHICH TO USE?
+ * - External: When you need control
+ * - Internal: When simple traversal is enough
+ */
+
+/**
+ * KEY CONCEPT 5: PHP BUILT-IN ITERATOR
+ * ────────────────────────────────────────
+ *
+ * PHP has built-in Iterator interface!
+ *
+ * interface Iterator {
+ *     public function current();     // Get current element
+ *     public function key();         // Get current key
+ *     public function next();        // Move to next
+ *     public function rewind();      // Reset to start
+ *     public function valid();       // Check if current position is valid
+ * }
+ *
+ * BENEFITS:
+ * - Works with foreach automatically
+ * - Standard interface everyone knows
+ * - PHP optimizations
+ * - Integration with SPL
+ *
+ * USAGE:
+ * class MyIterator implements Iterator {
+ *     private $position = 0;
+ *     private $array = [];
+ *
+ *     public function rewind() { $this->position = 0; }
+ *     public function current() { return $this->array[$this->position]; }
+ *     public function key() { return $this->position; }
+ *     public function next() { ++$this->position; }
+ *     public function valid() { return isset($this->array[$this->position]); }
+ * }
+ *
+ * $iterator = new MyIterator();
+ * foreach ($iterator as $key => $value) {
+ *     // Works automatically!
+ * }
+ *
+ * MAPPING:
+ * Custom Pattern    →    PHP Built-in
+ * ────────────────────────────────────
+ * hasNext()         →    valid()
+ * next()            →    next() + current()
+ * current()         →    current()
+ * reset()           →    rewind()
+ * N/A               →    key()
+ */
+
+/**
+ * KEY CONCEPT 6: ENCAPSULATION
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Hiding internal structure from clients
+ *
+ * WITHOUT ITERATOR (Bad):
+ * class Employee {
+ *     public $subordinates = []; // ❌ Public array
+ * }
+ *
+ * foreach ($employee->subordinates as $sub) {
+ *     // ❌ Client knows it's an array
+ *     // ❌ Hard to change to database later
+ * }
+ *
+ * WITH ITERATOR (Good):
+ * class Employee {
+ *     private $subordinates = []; // ✅ Private
+ *
+ *     public function getIterator() {
+ *         return new EmployeeIterator($this->subordinates);
+ *     }
+ * }
+ *
+ * $iterator = $employee->getIterator();
+ * while ($iterator->hasNext()) {
+ *     $sub = $iterator->next();
+ *     // ✅ Client doesn't know storage method
+ *     // ✅ Can change to database without affecting client
+ * }
+ *
+ * BENEFITS:
+ * ✅ Internal structure hidden
+ * ✅ Easy to change implementation
+ * ✅ Client code remains unchanged
+ * ✅ Proper abstraction
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: FILE SYSTEM
+ * ────────────────────────────────────────
+ * Collection: Directory
+ * Element: File/Folder
+ *
+ * Iterators:
+ * - FileIterator: Iterate files only
+ * - DirectoryIterator: Iterate subdirectories only
+ * - RecursiveIterator: All files in all subdirectories
+ * - FilterIterator: Only .php files, only .jpg files, etc.
+ *
+ * Usage:
+ * $dir = new Directory('/path/to/folder');
+ * $iterator = $dir->getFileIterator();
+ * while ($iterator->hasNext()) {
+ *     $file = $iterator->next();
+ *     echo $file->getName();
+ * }
+ */
+
+/**
+ * EXAMPLE 2: DATABASE RESULTS
+ * ────────────────────────────────────────
+ * Collection: ResultSet (query results)
+ * Element: Row
+ *
+ * Iterator: ResultIterator
+ * - Fetch rows one by one
+ * - Don't load all in memory (efficient!)
+ * - Hide database connection details
+ *
+ * Usage:
+ * $results = DB::query("SELECT * FROM users");
+ * $iterator = $results->getIterator();
+ * while ($iterator->hasNext()) {
+ *     $row = $iterator->next();
+ *     echo $row['name'];
+ * }
+ *
+ * Benefits:
+ * ✅ Memory efficient (one row at a time)
+ * ✅ Database details hidden
+ * ✅ Can switch databases without changing client code
+ */
+
+/**
+ * EXAMPLE 3: SOCIAL MEDIA FEED
+ * ────────────────────────────────────────
+ * Collection: NewsFeed
+ * Element: Post
+ *
+ * Iterators:
+ * - ChronologicalIterator: By time (newest first)
+ * - PopularIterator: By engagement (likes, comments)
+ * - FollowingIterator: Only from people you follow
+ * - RecommendedIterator: Algorithm-based recommendations
+ *
+ * Usage:
+ * $feed = new NewsFeed($user);
+ * $iterator = $feed->getChronologicalIterator();
+ * while ($iterator->hasNext()) {
+ *     $post = $iterator->next();
+ *     displayPost($post);
+ * }
+ *
+ * Benefits:
+ * ✅ Multiple ways to view same feed
+ * ✅ Easy to add new sorting methods
+ * ✅ Feed storage can change (cache, database, API)
+ */
+
+/**
+ * EXAMPLE 4: E-COMMERCE PRODUCTS
+ * ────────────────────────────────────────
+ * Collection: ProductCatalog
+ * Element: Product
+ *
+ * Iterators:
+ * - CategoryIterator: Filter by category
+ * - PriceRangeIterator: Products in price range
+ * - FeaturedIterator: Featured products only
+ * - SearchIterator: Search results
+ * - SortedIterator: By price, rating, popularity
+ *
+ * Usage:
+ * $catalog = new ProductCatalog();
+ * $iterator = $catalog->getPriceRangeIterator(100, 500);
+ * while ($iterator->hasNext()) {
+ *     $product = $iterator->next();
+ *     echo $product->getName() . ': $' . $product->getPrice();
+ * }
+ */
+
+/**
+ * EXAMPLE 5: MUSIC PLAYLIST
+ * ────────────────────────────────────────
+ * Collection: MusicPlaylist
+ * Element: Song
+ *
+ * Iterators:
+ * - SequentialIterator: Play in order
+ * - ShuffleIterator: Random order
+ * - RepeatIterator: Loop playlist
+ * - RepeatOneIterator: Repeat current song
+ *
+ * Usage:
+ * $playlist = new MusicPlaylist();
+ * $iterator = $playlist->getShuffleIterator();
+ * while ($iterator->hasNext()) {
+ *     $song = $iterator->next();
+ *     playSong($song);
+ * }
+ */
+
+/**
+ * EXAMPLE 6: EMPLOYEE HIERARCHY (Tree Structure)
+ * ────────────────────────────────────────
+ * Collection: Employee (with subordinates)
+ * Element: Employee
+ *
+ * Iterators:
+ * - DirectReportsIterator: Only immediate subordinates
+ * - AllSubordinatesIterator: All employees below (recursive)
+ * - DepartmentIterator: Only employees in department
+ * - LevelOrderIterator: Breadth-first traversal
+ * - DepthFirstIterator: Depth-first traversal
+ *
+ * Usage:
+ * $ceo = new Employee("CEO");
+ * $iterator = $ceo->getAllSubordinatesIterator();
+ * while ($iterator->hasNext()) {
+ *     $employee = $iterator->next();
+ *     echo $employee->getName();
+ * }
+ *
+ * Benefits:
+ * ✅ Tree traversal logic in iterator
+ * ✅ Employee class stays simple
+ * ✅ Easy to add new traversal methods
+ */
+
+// ============================================
+// ITERATOR PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Eloquent Collections
+ * ────────────────────────────────────────
+ *
+ * $users = User::all(); // Returns Collection
+ *
+ * // Collection implements Iterator!
+ * foreach ($users as $user) {
+ *     echo $user->name;
+ * }
+ *
+ * // Can also use iterator methods:
+ * $users->each(function($user) {
+ *     echo $user->name;
+ * });
+ *
+ * EXAMPLE 2: Lazy Collections (Memory Efficient!)
+ * ────────────────────────────────────────
+ *
+ * $users = User::cursor(); // Returns LazyCollection
+ *
+ * // Loads one at a time (doesn't load all in memory)
+ * foreach ($users as $user) {
+ *     echo $user->name;
+ *     // Memory efficient for large datasets!
+ * }
+ *
+ * EXAMPLE 3: Custom Iterator in Laravel
+ * ────────────────────────────────────────
+ *
+ * class EmployeeCollection implements \IteratorAggregate
+ * {
+ *     private $employees = [];
+ *
+ *     public function add(Employee $emp) {
+ *         $this->employees[] = $emp;
+ *     }
+ *
+ *     public function getIterator() {
+ *         return new \ArrayIterator($this->employees);
+ *     }
+ * }
+ *
+ * $employees = new EmployeeCollection();
+ * foreach ($employees as $employee) {
+ *     echo $employee->name;
+ * }
+ *
+ * EXAMPLE 4: Directory Iterator
+ * ────────────────────────────────────────
+ *
+ * $files = Storage::files('path');
+ * foreach ($files as $file) {
+ *     // Iterate through files
+ * }
+ *
+ * EXAMPLE 5: Query Builder Chunking
+ * ────────────────────────────────────────
+ *
+ * // Process large dataset in chunks (iterator pattern!)
+ * DB::table('users')->chunk(100, function ($users) {
+ *     foreach ($users as $user) {
+ *         // Process 100 users at a time
+ *     }
+ * });
+ *
+ * EXAMPLE 6: Generator Functions (Lazy Iteration)
+ * ────────────────────────────────────────
+ *
+ * function getEmployees() {
+ *     // Generator = built-in iterator!
+ *     yield new Employee('Alice');
+ *     yield new Employee('Bob');
+ *     yield new Employee('Charlie');
+ * }
+ *
+ * foreach (getEmployees() as $employee) {
+ *     echo $employee->getName();
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Checking hasNext()
+ * ────────────────────────────────────────
+ * PROBLEM: Accessing beyond collection bounds
+ *
+ * // ❌ BAD
+ * while (true) {
+ *     $item = $iterator->next(); // Can go past end!
+ * }
+ *
+ * // ✅ GOOD
+ * while ($iterator->hasNext()) {
+ *     $item = $iterator->next();
+ * }
+ *
+ * SOLUTION: Always check hasNext() or valid()
+ */
+
+/**
+ * MISTAKE 2: Modifying Collection During Iteration
+ * ────────────────────────────────────────
+ * PROBLEM: Iterator gets confused, skips elements, or errors
+ *
+ * // ❌ BAD
+ * while ($iterator->hasNext()) {
+ *     $item = $iterator->next();
+ *     if ($condition) {
+ *         $collection->remove($item); // ❌ Modifying during iteration!
+ *     }
+ * }
+ *
+ * // ✅ GOOD (collect items to remove, then remove after)
+ * $toRemove = [];
+ * while ($iterator->hasNext()) {
+ *     $item = $iterator->next();
+ *     if ($condition) {
+ *         $toRemove[] = $item;
+ *     }
+ * }
+ * foreach ($toRemove as $item) {
+ *     $collection->remove($item);
+ * }
+ *
+ * SOLUTION: Don't add/remove during iteration
+ */
+
+/**
+ * MISTAKE 3: Not Resetting Iterator
+ * ────────────────────────────────────────
+ * PROBLEM: Can't iterate twice
+ *
+ * // ❌ BAD
+ * while ($iterator->hasNext()) {
+ *     // First iteration
+ * }
+ * while ($iterator->hasNext()) {
+ *     // Won't work! Iterator already at end
+ * }
+ *
+ * // ✅ GOOD
+ * while ($iterator->hasNext()) {
+ *     // First iteration
+ * }
+ * $iterator->reset(); // Reset to start
+ * while ($iterator->hasNext()) {
+ *     // Second iteration works!
+ * }
+ *
+ * SOLUTION: Call reset() or rewind(), or create new iterator
+ */
+
+/**
+ * MISTAKE 4: Exposing Internal Structure
+ * ────────────────────────────────────────
+ * PROBLEM: Defeats purpose of iterator
+ *
+ * // ❌ BAD
+ * class Collection {
+ *     public $items = []; // ❌ Public!
+ *
+ *     public function getIterator() {
+ *         return new Iterator($this->items);
+ *     }
+ * }
+ *
+ * // Client can do:
+ * $collection->items[] = "hack"; // ❌ Direct access!
+ *
+ * // ✅ GOOD
+ * class Collection {
+ *     private $items = []; // ✅ Private!
+ *
+ *     public function getIterator() {
+ *         return new Iterator($this->items);
+ *     }
+ * }
+ *
+ * SOLUTION: Keep collection structure private
+ */
+
+/**
+ * MISTAKE 5: Tight Coupling to Collection
+ * ────────────────────────────────────────
+ * PROBLEM: Iterator knows too much about collection internals
+ *
+ * // ❌ BAD
+ * class Iterator {
+ *     public function next() {
+ *         return $this->collection->internalArray[$this->position++];
+ *         // ❌ Knows about internalArray!
+ *     }
+ * }
+ *
+ * // ✅ GOOD
+ * class Iterator {
+ *     public function next() {
+ *         return $this->collection->getAt($this->position++);
+ *         // ✅ Uses public interface!
+ *     }
+ * }
+ *
+ * SOLUTION: Iterator should only use collection's public interface
+ */
+
+/**
+ * MISTAKE 6: Not Implementing PHP Iterator Interface
+ * ────────────────────────────────────────
+ * PROBLEM: Can't use with foreach
+ *
+ * // ❌ BAD (custom interface only)
+ * class MyIterator {
+ *     public function hasNext() { }
+ *     public function next() { }
+ * }
+ *
+ * // Can't use:
+ * foreach ($myIterator as $item) { } // ❌ Error!
+ *
+ * // ✅ GOOD (implements PHP Iterator)
+ * class MyIterator implements Iterator {
+ *     public function current() { }
+ *     public function next() { }
+ *     public function valid() { }
+ *     public function rewind() { }
+ *     public function key() { }
+ * }
+ *
+ * // Can use:
+ * foreach ($myIterator as $item) { } // ✅ Works!
+ *
+ * SOLUTION: Implement PHP's Iterator interface
+ */
+
+/**
+ * MISTAKE 7: Stateful Iterator Issues
+ * ────────────────────────────────────────
+ * PROBLEM: Multiple iterations interfere with each other
+ *
+ * // ❌ BAD (reusing same iterator)
+ * $iterator = $collection->getIterator();
+ *
+ * // First loop
+ * while ($iterator->hasNext()) { }
+ *
+ * // Second loop - doesn't work!
+ * while ($iterator->hasNext()) { } // Already at end
+ *
+ * // ✅ GOOD (create new iterator each time)
+ * $iterator1 = $collection->getIterator();
+ * while ($iterator1->hasNext()) { }
+ *
+ * $iterator2 = $collection->getIterator(); // New iterator
+ * while ($iterator2->hasNext()) { }
+ *
+ * SOLUTION: Create new iterator for each traversal
+ */
+
+/**
+ * MISTAKE 8: Heavy Iterator Constructor
+ * ────────────────────────────────────────
+ * PROBLEM: Loading entire collection in iterator constructor
+ *
+ * // ❌ BAD
+ * class AllEmployeesIterator {
+ *     public function __construct(Employee $root) {
+ *         // ❌ Loads ALL employees immediately
+ *         $this->employees = $this->loadAllFromDatabase($root);
+ *     }
+ * }
+ *
+ * // ✅ GOOD
+ * class AllEmployeesIterator {
+ *     public function __construct(Employee $root) {
+ *         $this->root = $root;
+ *         // Load on-demand during iteration
+ *     }
+ *
+ *     public function next() {
+ *         // Load next employee on demand
+ *     }
+ * }
+ *
+ * SOLUTION: Load data on-demand, not all at once
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Use PHP's Iterator Interface
+ * ────────────────────────────────────────
+ * Implement Iterator or IteratorAggregate
+ * Works with foreach automatically
+ *
+ * class MyCollection implements IteratorAggregate {
+ *     public function getIterator() {
+ *         return new ArrayIterator($this->items);
+ *     }
+ * }
+ */
+
+/**
+ * BEST PRACTICE 2: Keep Iterator Lightweight
+ * ────────────────────────────────────────
+ * Don't load entire collection in iterator
+ * Fetch on-demand
+ *
+ * // ✅ GOOD
+ * class DatabaseIterator {
+ *     public function next() {
+ *         // Fetch one row at a time
+ *         return DB::fetchRow($this->position++);
+ *     }
+ * }
+ */
+
+/**
+ * BEST PRACTICE 3: Make Iterator Disposable
+ * ────────────────────────────────────────
+ * Create new iterator for each traversal
+ * Don't reuse iterators
+ *
+ * // ✅ GOOD
+ * $iter1 = $collection->getIterator();
+ * $iter2 = $collection->getIterator(); // New instance
+ */
+
+/**
+ * BEST PRACTICE 4: Provide Multiple Iterators
+ * ────────────────────────────────────────
+ * Different traversal methods
