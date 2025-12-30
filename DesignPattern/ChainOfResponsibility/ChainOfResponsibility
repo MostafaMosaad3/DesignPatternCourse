@@ -1,0 +1,652 @@
+<?php
+
+// ============================================
+// CHAIN OF RESPONSIBILITY PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS CHAIN OF RESPONSIBILITY PATTERN?
+ *
+ * The Chain of Responsibility Pattern passes a request through a chain of handlers.
+ * Each handler decides either to process the request or pass it to the next handler.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of customer support escalation:
+ * - Call customer service → Level 1 support (tries to help)
+ * - Can't solve? → Pass to Level 2 support (specialist)
+ * - Still can't solve? → Pass to Level 3 (manager)
+ * - Still stuck? → Pass to engineering team
+ * Each level tries to handle, or passes it up the chain!
+ *
+ * ANOTHER ANALOGY:
+ * ATM withdrawal process:
+ * - Check if card is valid → If not, reject
+ * - Check if PIN is correct → If not, reject
+ * - Check if sufficient balance → If not, reject
+ * - Check daily limit → If not, reject
+ * - Dispense cash → Success!
+ * Each check is a handler in the chain!
+ *
+ * MORE ANALOGIES:
+ * - Security checkpoint: ID check → Bag scan → Metal detector → Manual search
+ * - Email spam filter: Blacklist check → Content analysis → Bayesian filter → Manual review
+ * - Loan approval: Credit check → Income verification → Background check → Manager approval
+ * - Vending machine: Accept coin → Validate amount → Check stock → Dispense product
+ *
+ * COMPONENTS:
+ * 1. Handler Interface: Defines method to handle request and set next handler
+ * 2. Abstract Handler: Implements chain logic (optional)
+ * 3. Concrete Handlers: Actual handlers that process or pass requests
+ * 4. Client: Initiates request to the chain
+ *
+ * WHEN TO USE:
+ * - Multiple objects can handle a request, but handler isn't known beforehand
+ * - Want to issue request to one of several objects without specifying receiver
+ * - Set of handlers should be dynamically specified
+ * - Need to process request through multiple stages
+ * - Each stage can stop or continue processing
+ * - Order of handlers matters
+ *
+ * WHEN NOT TO USE:
+ * - Only one handler
+ * - Order doesn't matter (use different pattern)
+ * - Every request must be handled (no conditional logic)
+ * - Handlers don't need to pass to next
+ *
+ * BENEFITS:
+ * ✅ Decouples sender from receiver
+ * ✅ Single Responsibility: Each handler does one thing
+ * ✅ Open/Closed: Easy to add new handlers
+ * ✅ Flexible ordering: Can rearrange chain
+ * ✅ Can stop processing at any point
+ * ✅ Each handler independent and testable
+ * ✅ Dynamic chain: Add/remove handlers at runtime
+ *
+ * DRAWBACKS:
+ * ❌ Request might not be handled (falls through chain)
+ * ❌ Hard to debug (trace through chain)
+ * ❌ Performance: Every request goes through all handlers
+ * ❌ Can be hard to see full flow
+ * ❌ Responsibility can be unclear
+ */
+
+// ============================================
+// STRUCTURE OF CHAIN OF RESPONSIBILITY PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Handler Interface                 │
+ * ├─────────────────────────────────────────┤
+ * │ + setNext(Handler): Handler             │
+ * │ + handle(request): mixed                │
+ * └─────────────────────────────────────────┘
+ *                   ▲
+ *                   │ implements
+ * ┌─────────────────────────────────────────────┐
+ * │           AbstractHandler                   │
+ * │      (Base Class / Shared HOW)              │
+ * ├─────────────────────────────────────────────┤
+ * │ - nextHandler : Handler                     │
+ * ├─────────────────────────────────────────────┤
+ * │ + setNext(Handler): Handler                 │
+ * │ + handle(request): mixed                    │
+ * │   (default chain logic)                     │
+ * └─────────────────────────────────────────────┘
+ *                   ▲
+ *                   │ extends
+ *       ┌───────────┼───────────┐
+ *       │           │           │
+ * ┌──────────┐ ┌──────────┐ ┌──────────┐
+ * │Handler 1 │ │Handler 2 │ │Handler 3 │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │-next     │ │-next     │ │-next     │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │+handle() │→│+handle() │→│+handle() │
+ * └──────────┘ └──────────┘ └──────────┘
+ *
+ * Flow: Client → Handler1 → Handler2 → Handler3
+ *       Any handler can stop the chain
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW CHAIN OF RESPONSIBILITY WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (Build the Chain):
+ * ────────────────────────────────────────
+ * 1. Create handlers
+ *    → $auth = new AuthenticationHandler()
+ *    → $authz = new AuthorizationHandler()
+ *    → $security = new SecurityHandler()
+ *
+ * 2. Link handlers together
+ *    → $auth->setNext($authz)
+ *    → $authz->setNext($security)
+ *    → Chain: Auth → Authz → Security
+ *
+ * EXECUTION PHASE (Process Request):
+ * ────────────────────────────────────────
+ * 3. Client sends request to first handler
+ *    → $auth->handle($request)
+ *
+ * 4. First handler processes
+ *    → If can't handle: pass to next
+ *    → If can handle: process and optionally pass to next
+ *    → If error: stop chain (don't pass)
+ *
+ * 5. Request flows through chain
+ *    → Auth checks credentials
+ *    → Passes to Authz
+ *    → Authz checks permissions
+ *    → Passes to Security
+ *    → Security checks threats
+ *    → Reaches final handler
+ *
+ * 6. Final result returned
+ *    → Success: request processed
+ *    → Failure: error at some handler
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Each handler independent
+ * - Can stop chain at any point
+ * - Can pass modified request
+ * - Order matters!
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE HANDLER
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Object that can process a request or pass it to next handler
+ *
+ * KEY METHODS:
+ * - setNext(handler): Set next handler in chain
+ * - handle(request): Process request or pass to next
+ *
+ * CHARACTERISTICS:
+ * - Has reference to next handler
+ * - Decides whether to handle or pass
+ * - Can modify request before passing
+ * - Independent from other handlers
+ *
+ * EXAMPLE:
+ * abstract class Handler {
+ *     protected $next;
+ *
+ *     public function setNext(Handler $handler) {
+ *         $this->next = $handler;
+ *         return $handler;
+ *     }
+ *
+ *     public function handle($request) {
+ *         if ($this->next) {
+ *             return $this->next->handle($request);
+ *         }
+ *         return null;
+ *     }
+ * }
+ *
+ * WHY USEFUL?
+ * - Decouples sender from receiver
+ * - Flexible chain construction
+ * - Each handler focused
+ */
+
+/**
+ * KEY CONCEPT 2: THE CHAIN
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Linked list of handlers
+ *
+ * STRUCTURE:
+ * Handler1 → Handler2 → Handler3 → null
+ *
+ * HOW IT WORKS:
+ * 1. Request enters at Handler1
+ * 2. Handler1 processes
+ * 3. If passes: goes to Handler2
+ * 4. Handler2 processes
+ * 5. If passes: goes to Handler3
+ * 6. And so on...
+ *
+ * BUILDING THE CHAIN:
+ * $h1 = new Handler1();
+ * $h2 = new Handler2();
+ * $h3 = new Handler3();
+ *
+ * $h1->setNext($h2)->setNext($h3);
+ *
+ * Or fluently:
+ * $h1->setNext($h2)
+ *    ->setNext($h3);
+ *
+ * WHY LINKED LIST?
+ * - Dynamic: Can add/remove handlers
+ * - Flexible: Can rearrange order
+ * - Simple: Just pointer to next
+ */
+
+/**
+ * KEY CONCEPT 3: HANDLING STRATEGIES
+ * ────────────────────────────────────────
+ *
+ * STRATEGY 1: Process and Stop
+ * Handler processes, doesn't call next
+ *
+ * public function handle($request) {
+ *     // Process
+ *     return $result; // Don't call next
+ * }
+ *
+ * STRATEGY 2: Process and Continue
+ * Handler processes, then passes to next
+ *
+ * public function handle($request) {
+ *     // Process
+ *     if ($this->next) {
+ *         return $this->next->handle($request);
+ *     }
+ * }
+ *
+ * STRATEGY 3: Conditional Pass
+ * Handler decides whether to continue
+ *
+ * public function handle($request) {
+ *     if (!$this->canHandle($request)) {
+ *         return $this->next->handle($request);
+ *     }
+ *     // Process
+ * }
+ *
+ * STRATEGY 4: Modify and Pass
+ * Handler modifies request before passing
+ *
+ * public function handle($request) {
+ *     $request = $this->modify($request);
+ *     return $this->next->handle($request);
+ * }
+ */
+
+/**
+ * KEY CONCEPT 4: MIDDLEWARE PATTERN
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Special case of Chain of Responsibility
+ * Used in web frameworks (Laravel, Express, etc.)
+ *
+ * CHARACTERISTICS:
+ * - Request flows through middleware chain
+ * - Each middleware can:
+ *   * Modify request
+ *   * Stop processing
+ *   * Call next middleware
+ *   * Modify response
+ *
+ * EXAMPLE (Laravel-style):
+ * class AuthMiddleware {
+ *     public function handle($request, $next) {
+ *         // Before logic
+ *         if (!auth()->check()) {
+ *             return redirect('login');
+ *         }
+ *
+ *         $response = $next($request); // Call next
+ *
+ *         // After logic
+ *         return $response;
+ *     }
+ * }
+ *
+ * FLOW:
+ * Request → Middleware1 → Middleware2 → Controller
+ *        ← Response    ← Response    ← Response
+ */
+
+// ============================================
+// YOUR USE CASE: HTTP REQUEST PROCESSING
+// ============================================
+
+/**
+ * HTTP REQUEST MIDDLEWARE CHAIN
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - HTTP requests need multiple checks
+ * - Authentication → Authorization → Security → Rate Limiting
+ * - Each check can fail and stop request
+ * - Order matters (auth before authz)
+ * - Want to add/remove checks easily
+ *
+ * SOLUTION WITH CHAIN OF RESPONSIBILITY:
+ *
+ * Handlers (Middleware):
+ * 1. AuthenticationHandler: Check if user logged in
+ * 2. AuthorizationHandler: Check if user has permission
+ * 3. SecurityHandler: Check for threats (XSS, SQL injection)
+ * 4. RateLimitHandler: Check request rate
+ * 5. LoggingHandler: Log request
+ * 6. RequestHandler: Process actual request
+ *
+ * CHAIN:
+ * Auth → Authz → Security → RateLimit → Logging → Request
+ *
+ * BENEFITS:
+ * - Add new check: Create new handler
+ * - Remove check: Remove from chain
+ * - Reorder: Change chain order
+ * - Test each handler independently
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: WEB FRAMEWORK MIDDLEWARE
+ * ────────────────────────────────────────
+ * Chain: CORS → Auth → CSRF → Session → Controller
+ * Each middleware can modify request/response
+ *
+ * EXAMPLE 2: LOGGING LEVELS
+ * ────────────────────────────────────────
+ * Chain: ConsoleLogger → FileLogger → EmailLogger → DatabaseLogger
+ * Each logger checks if it should log at that level
+ *
+ * EXAMPLE 3: APPROVAL WORKFLOW
+ * ────────────────────────────────────────
+ * Chain: Manager → Director → VP → CEO
+ * Each approver checks amount threshold
+ *
+ * EXAMPLE 4: DATA VALIDATION
+ * ────────────────────────────────────────
+ * Chain: TypeValidator → RangeValidator → FormatValidator → BusinessRuleValidator
+ * Each validates different aspect
+ *
+ * EXAMPLE 5: PAYMENT PROCESSING
+ * ────────────────────────────────────────
+ * Chain: CreditCardPayment → PayPalPayment → BankTransferPayment → CryptoPayment
+ * Try each payment method until one succeeds
+ */
+
+// ============================================
+// CHAIN OF RESPONSIBILITY IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL MIDDLEWARE (Built-in Chain!)
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Route Middleware
+ *
+ * Route::get('/admin', function() {
+ *     return 'Admin Panel';
+ * })->middleware(['auth', 'admin', 'verified']);
+ *
+ * Chain: auth → admin → verified → controller
+ *
+ * EXAMPLE 2: Custom Middleware
+ *
+ * class CheckAge {
+ *     public function handle($request, Closure $next) {
+ *         if ($request->age < 18) {
+ *             return redirect('home');
+ *         }
+ *
+ *         return $next($request); // Continue chain
+ *     }
+ * }
+ *
+ * EXAMPLE 3: Global Middleware (app/Http/Kernel.php)
+ *
+ * protected $middleware = [
+ *     \App\Http\Middleware\TrustProxies::class,
+ *     \App\Http\Middleware\CheckForMaintenanceMode::class,
+ *     \App\Http\Middleware\ValidatePostSize::class,
+ *     \App\Http\Middleware\TrimStrings::class,
+ * ];
+ *
+ * EXAMPLE 4: Middleware Groups
+ *
+ * protected $middlewareGroups = [
+ *     'web' => [
+ *         \App\Http\Middleware\EncryptCookies::class,
+ *         \App\Http\Middleware\VerifyCsrfToken::class,
+ *         \Illuminate\Session\Middleware\StartSession::class,
+ *     ],
+ * ];
+ *
+ * EXAMPLE 5: Pipeline (Laravel's Internal Chain)
+ *
+ * app(Pipeline::class)
+ *     ->send($request)
+ *     ->through([
+ *         AuthMiddleware::class,
+ *         LogMiddleware::class,
+ *     ])
+ *     ->then(function($request) {
+ *         // Final handler
+ *     });
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Calling Next Handler
+ * ────────────────────────────────────────
+ * PROBLEM: Chain breaks, request stops
+ * SOLUTION: Always call next if should continue
+ *
+ * MISTAKE 2: Wrong Chain Order
+ * ────────────────────────────────────────
+ * PROBLEM: Authorization before authentication
+ * SOLUTION: Think through logical order
+ *
+ * MISTAKE 3: No Default Handler
+ * ────────────────────────────────────────
+ * PROBLEM: Request falls through, nothing handles it
+ * SOLUTION: Add final handler that always handles
+ *
+ * MISTAKE 4: Handlers Know About Each Other
+ * ────────────────────────────────────────
+ * PROBLEM: Tight coupling between handlers
+ * SOLUTION: Each handler independent
+ *
+ * MISTAKE 5: Modifying Request Incorrectly
+ * ────────────────────────────────────────
+ * PROBLEM: Next handler gets broken request
+ * SOLUTION: Validate before passing
+ *
+ * MISTAKE 6: No Error Handling
+ * ────────────────────────────────────────
+ * PROBLEM: Exception in one handler breaks chain
+ * SOLUTION: Try-catch in handlers
+ *
+ * MISTAKE 7: Circular References
+ * ────────────────────────────────────────
+ * PROBLEM: Handler1 → Handler2 → Handler1 (infinite loop)
+ * SOLUTION: Validate chain structure
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Single Responsibility
+ * ────────────────────────────────────────
+ * Each handler does ONE thing
+ *
+ * BEST PRACTICE 2: Meaningful Names
+ * ────────────────────────────────────────
+ * Good: AuthenticationHandler, ValidationHandler
+ * Bad: Handler1, ProcessHandler
+ *
+ * BEST PRACTICE 3: Return Early
+ * ────────────────────────────────────────
+ * If can't handle, pass to next immediately
+ *
+ * BEST PRACTICE 4: Immutable Requests
+ * ────────────────────────────────────────
+ * Don't modify original, create new if needed
+ *
+ * BEST PRACTICE 5: Logging
+ * ────────────────────────────────────────
+ * Log when handler processes
+ * Helps debug chain flow
+ *
+ * BEST PRACTICE 6: Testing
+ * ────────────────────────────────────────
+ * Test each handler independently
+ * Test full chain integration
+ *
+ * BEST PRACTICE 7: Documentation
+ * ────────────────────────────────────────
+ * Document chain order and why
+ *
+ * BEST PRACTICE 8: Default Handler
+ * ────────────────────────────────────────
+ * Always have final handler that handles everything
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * CHAIN vs DECORATOR
+ * ────────────────────────────────────────
+ * Chain: Request passes through handlers (can stop)
+ * Decorator: Adds behavior by wrapping (always continues)
+ * Chain: Linear flow, Decorator: Nested wrapping
+ *
+ * CHAIN vs COMMAND
+ * ────────────────────────────────────────
+ * Chain: Handlers process in sequence
+ * Command: Encapsulates single request
+ * Can combine: Chain of commands
+ *
+ * CHAIN vs STRATEGY
+ * ────────────────────────────────────────
+ * Chain: Multiple handlers, one executes
+ * Strategy: One algorithm selected
+ * Chain: Sequential checking, Strategy: Direct selection
+ *
+ * CHAIN vs OBSERVER
+ * ────────────────────────────────────────
+ * Chain: Request goes through handlers sequentially
+ * Observer: Event notifies all observers simultaneously
+ * Chain: Can stop, Observer: All notified
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR CHAIN OF RESPONSIBILITY:
+ * ────────────────────────────────────────
+ *
+ * □ Create Handler interface
+ * □ Add setNext() method
+ * □ Add handle() method
+ * □ Create Abstract Handler (optional)
+ * □ Implement default chain logic
+ * □ Create Concrete Handlers
+ * □ Implement handle logic
+ * □ Decide: stop or continue?
+ * □ Build the chain (link handlers)
+ * □ Set correct order
+ * □ Add default/final handler
+ * □ Test each handler independently
+ * □ Test full chain
+ * □ Test chain with failures
+ * □ Document chain order
+ * □ Add logging
+ *
+ * LARAVEL MIDDLEWARE CHECKLIST:
+ * ────────────────────────────────────────
+ *
+ * □ Create middleware: php artisan make:middleware
+ * □ Implement handle($request, $next)
+ * □ Add before logic
+ * □ Call $next($request)
+ * □ Add after logic
+ * □ Register in Kernel.php
+ * □ Apply to routes
+ * □ Test middleware
+ * □ Check order in middleware groups
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * CHAIN OF RESPONSIBILITY IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Pass request through chain of handlers
+ *
+ * WHY: Decouple sender from receiver, flexible processing
+ *
+ * WHEN: Multiple handlers, order matters, can stop processing
+ *
+ * HOW:
+ * 1. Create handlers with setNext() and handle()
+ * 2. Link handlers in chain
+ * 3. Send request to first handler
+ * 4. Each handler processes or passes to next
+ * 5. Chain continues until handled or end
+ *
+ * COMPONENTS:
+ * - Handler: Interface for handling
+ * - Concrete Handlers: Actual processors
+ * - Chain: Linked handlers
+ * - Client: Initiates request
+ *
+ * BENEFITS:
+ * ✅ Decouples sender/receiver
+ * ✅ Single Responsibility
+ * ✅ Open/Closed
+ * ✅ Flexible chain
+ * ✅ Can stop anytime
+ *
+ * USE WHEN:
+ * ✅ Multiple potential handlers
+ * ✅ Handler unknown beforehand
+ * ✅ Order matters
+ * ✅ Can stop processing
+ * ✅ Middleware-like behavior
+ *
+ * DON'T USE WHEN:
+ * ❌ Only one handler
+ * ❌ Order doesn't matter
+ * ❌ Must process all
+ * ❌ Simple if-else sufficient
+ *
+ * KEY PRINCIPLE:
+ * "Pass request down chain until someone handles it"
+ *
+ * REMEMBER:
+ * - Each handler independent
+ * - Can stop chain anytime
+ * - Order matters!
+ * - Laravel middleware is this pattern
+ * - Test each handler separately
+ */
