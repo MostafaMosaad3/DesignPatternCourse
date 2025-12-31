@@ -1,0 +1,950 @@
+
+// ============================================
+// STATE DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS STATE PATTERN?
+ *
+ * The State Pattern allows an object to alter its behavior when its internal state changes.
+ * The object will appear to change its class.
+ *
+ * SIMPLE EXPLANATION:
+ * Instead of having many if-else statements to handle different states,
+ * you create separate classes for each state and switch between them.
+ *
+ * REAL-WORLD ANALOGY 1: TRAFFIC LIGHT
+ * A traffic light has different states:
+ * - Red: Cars must stop
+ * - Yellow: Cars should slow down
+ * - Green: Cars can go
+ *
+ * Each state has different behavior. When state changes, behavior changes.
+ *
+ * REAL-WORLD ANALOGY 2: VENDING MACHINE
+ * A vending machine has different states:
+ * - NoMoney: Waiting for money, can't dispense
+ * - HasMoney: Can select product or return money
+ * - Dispensing: Dispensing product, can't cancel
+ * - OutOfStock: Can't accept money or dispense
+ *
+ * Each state allows different actions.
+ *
+ * REAL-WORLD ANALOGY 3: DOCUMENT WORKFLOW
+ * A document goes through states:
+ * - Draft: Can edit, can submit for review
+ * - InReview: Can approve or reject, can't edit
+ * - Approved: Can publish, can't edit
+ * - Published: Can archive, can't edit
+ *
+ * Each state has different allowed operations.
+ *
+ * REAL-WORLD ANALOGY 4: ORDER STATUS (E-COMMERCE)
+ * An order goes through states:
+ * - New: Can be processed, can be cancelled
+ * - Processing: Can be shipped, can be cancelled
+ * - Shipped: Can be delivered, cannot be cancelled
+ * - Delivered: Final state, no further actions
+ *
+ * Each state has different rules about what can happen next.
+ *
+ * MORE ANALOGIES:
+ * - User Account: Active, Suspended, Banned, Deleted
+ * - Media Player: Playing, Paused, Stopped
+ * - TCP Connection: Closed, Listen, Established
+ * - Elevator: Idle, MovingUp, MovingDown, DoorsOpen
+ *
+ * COMPONENTS:
+ * 1. State Interface: Defines methods for all states
+ * 2. Concrete States: Different implementations for each state
+ * 3. Context: The object that has a state and delegates to it
+ * 4. Client: Uses the context
+ *
+ * WHEN TO USE:
+ * - Object behavior changes based on its state
+ * - Many if-else statements based on state
+ * - State transitions are complex
+ * - Want to add new states easily
+ * - Different states have different behaviors
+ *
+ * WHEN NOT TO USE:
+ * - Only 2-3 states (simple if-else is fine)
+ * - States don't have different behaviors
+ * - No state transitions
+ * - State logic is very simple
+ *
+ * BENEFITS:
+ * ✅ Single Responsibility: Each state handles its own behavior
+ * ✅ Open/Closed Principle: Add new states without modifying existing ones
+ * ✅ Eliminates conditional statements (no if-else for states)
+ * ✅ State transitions are explicit and clear
+ * ✅ Easy to understand current state behavior
+ * ✅ Easy to test each state independently
+ * ✅ Simplifies complex state-dependent code
+ *
+ * DRAWBACKS:
+ * ❌ More classes: Each state is a separate class
+ * ❌ Can be overkill for simple state machines
+ * ❌ More complex for simple scenarios
+ * ❌ Context must expose enough API for states
+ */
+
+// ============================================
+// STRUCTURE OF STATE PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ *                    ┌─────────────────┐
+ *                    │    Context      │
+ *                    ├─────────────────┤
+ *                    │ - state         │
+ *                    ├─────────────────┤
+ *                    │ + setState()    │
+ *                    │ + request()     │
+ *                    └────────┬────────┘
+ *                             │ has
+ *                             ↓
+ *                    ┌─────────────────┐
+ *                    │ State Interface │
+ *                    ├─────────────────┤
+ *                    │ + handle()      │
+ *                    └────────┬────────┘
+ *                             △
+ *                             │ implements
+ *            ┌────────────────┼────────────────┐
+ *            │                │                │
+ *     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+ *     │ConcreteStateA│ │ConcreteStateB│ │ConcreteStateC│
+ *     ├──────────────┤ ├──────────────┤ ├──────────────┤
+ *     │+ handle()    │ │+ handle()    │ │+ handle()    │
+ *     └──────────────┘ └──────────────┘ └──────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW STATE PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────
+ * 1. Create State Interface
+ *    → Defines methods all states must implement
+ *
+ * 2. Create Concrete State Classes
+ *    → NewState, ProcessingState, ShippedState, DeliveredState
+ *    → Each implements the interface differently
+ *
+ * 3. Create Context Class
+ *    → Order (has a state property)
+ *    → Has setState() to change state
+ *    → Delegates operations to current state
+ *
+ * EXECUTION PHASE:
+ * ────────────────────────────
+ * 4. Context starts with initial state
+ *    → order = new Order() → NewState
+ *
+ * 5. Client calls method on context
+ *    → order->process()
+ *
+ * 6. Context delegates to current state
+ *    → currentState->process(order)
+ *
+ * 7. State executes its behavior
+ *    → NewState allows processing
+ *    → Changes order state to ProcessingState
+ *
+ * 8. State changes, behavior changes
+ *    → order->cancel() now behaves differently
+ *    → ProcessingState allows cancel
+ *    → ShippedState doesn't allow cancel
+ *
+ * STATE TRANSITION:
+ * ────────────────────────────
+ * New → process() → Processing
+ * Processing → ship() → Shipped
+ * Shipped → deliver() → Delivered
+ *
+ * Processing → cancel() → Cancelled
+ * New → cancel() → Cancelled
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE STATE INTERFACE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Contract that all state classes must follow
+ *
+ * WHY USE IT?
+ * - Ensures all states have same methods
+ * - Makes states interchangeable
+ * - Context can use any state
+ *
+ * EXAMPLE:
+ * interface OrderState {
+ *     public function process(Order $order): array;
+ *     public function cancel(Order $order): array;
+ *     public function ship(Order $order): array;
+ * }
+ */
+
+/**
+ * KEY CONCEPT 2: CONCRETE STATES
+ * ──────────────────────────────
+ *
+ * WHAT ARE THEY?
+ * Different implementations for each state
+ *
+ * WHY DIFFERENT?
+ * Each state has different rules:
+ * - NewState: Can process, can cancel
+ * - ProcessingState: Can ship, can cancel
+ * - ShippedState: Can deliver, can't cancel
+ * - DeliveredState: Can't do anything
+ *
+ * KEY POINT:
+ * Same method names, different behavior!
+ */
+
+/**
+ * KEY CONCEPT 3: THE CONTEXT
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The object that has states (Order)
+ *
+ * WHAT DOES IT DO?
+ * - Holds current state
+ * - Provides methods that delegate to state
+ * - Allows state changes
+ *
+ * WHAT DOESN'T IT DO?
+ * - Doesn't know state implementation details
+ * - Doesn't have if-else for states
+ *
+ * EXAMPLE:
+ * class Order {
+ *     private OrderState $state;
+ *
+ *     public function process() {
+ *         return $this->state->process($this);
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 4: STATE TRANSITIONS
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Moving from one state to another
+ *
+ * WHO CONTROLS IT?
+ * - States themselves decide transitions
+ * - State calls context->setState()
+ *
+ * EXAMPLE:
+ * class NewState implements OrderState {
+ *     public function process(Order $order) {
+ *         // Change state to Processing
+ *         $order->setState(new ProcessingState());
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 5: STATE ENCAPSULATION
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Each state encapsulates its own behavior
+ *
+ * BENEFITS:
+ * - State logic contained in one class
+ * - Easy to modify state behavior
+ * - No impact on other states
+ * - Clear separation of concerns
+ */
+
+/**
+ * KEY CONCEPT 6: CONTEXT INTERFACE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Methods context provides to states
+ *
+ * WHY NEEDED?
+ * - States need to change context's state
+ * - States may need context data
+ * - setState() is essential
+ *
+ * BALANCE:
+ * - Expose enough for states to work
+ * - Don't expose too much (tight coupling)
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: E-COMMERCE ORDER SYSTEM
+ * ────────────────────────────
+ * States: New, Processing, Shipped, Delivered, Cancelled, Returned
+ * Transitions: Based on business rules
+ * Each state has different allowed actions
+ *
+ * EXAMPLE 2: DOCUMENT WORKFLOW
+ * ────────────────────────────
+ * States: Draft, InReview, Approved, Published, Archived
+ * Transitions: Based on approval process
+ * Draft can be edited, Published cannot
+ *
+ * EXAMPLE 3: USER ACCOUNT STATUS
+ * ────────────────────────────
+ * States: Active, Suspended, Banned, Deleted
+ * Transitions: Based on user behavior or admin action
+ * Active can post, Banned cannot
+ *
+ * EXAMPLE 4: MEDIA PLAYER
+ * ────────────────────────────
+ * States: Stopped, Playing, Paused
+ * Transitions: Based on user controls
+ * Playing can pause, Stopped cannot pause
+ *
+ * EXAMPLE 5: TCP CONNECTION
+ * ────────────────────────────
+ * States: Closed, Listen, SynSent, Established, FinWait
+ * Transitions: Based on protocol
+ * Each state handles packets differently
+ *
+ * EXAMPLE 6: VENDING MACHINE
+ * ────────────────────────────
+ * States: NoMoney, HasMoney, Dispensing, OutOfStock
+ * Transitions: Based on user actions and inventory
+ * HasMoney can dispense, NoMoney cannot
+ *
+ * EXAMPLE 7: GAME CHARACTER
+ * ────────────────────────────
+ * States: Standing, Walking, Running, Jumping, Crouching
+ * Transitions: Based on player input
+ * Different animations and physics per state
+ *
+ * EXAMPLE 8: TRAFFIC LIGHT SYSTEM
+ * ────────────────────────────
+ * States: Red, Yellow, Green
+ * Transitions: Time-based or sensor-based
+ * Each state controls traffic flow differently
+ */
+
+// ============================================
+// STATE PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATION OPTIONS
+ * ────────────────────────────
+ *
+ * OPTION 1: Store state as string in database
+ * - Save state name: 'New', 'Processing', 'Shipped'
+ * - Restore state object when loading order
+ * - Simple and works well
+ *
+ * OPTION 2: Use Eloquent Model Observer
+ * - Trigger state changes on model events
+ * - Keep state logic separate from model
+ *
+ * OPTION 3: Use Service Layer
+ * - OrderService handles state management
+ * - Controllers call service methods
+ * - Clean separation of concerns
+ *
+ * MAPPING:
+ * State Pattern         →    Laravel
+ * ─────────────────────────────────────
+ * State Classes        →    State classes in app/States
+ * Context (Order)      →    Order model + Service
+ * setState()           →    Service method
+ * State storage        →    Database column (status)
+ *
+ * EXAMPLE: Eloquent Model
+ *
+ * class Order extends Model {
+ *     // Store state as string
+ *     protected $casts = ['status' => 'string'];
+ *
+ *     // Helper method to create state object
+ *     public function getStateObject(): OrderState {
+ *         return match($this->status) {
+ *             'New' => new NewState(),
+ *             'Processing' => new ProcessingState(),
+ *             'Shipped' => new ShippedState(),
+ *             default => new NewState()
+ *         };
+ *     }
+ * }
+ *
+ * EXAMPLE: Service Class
+ *
+ * class OrderService {
+ *     public function processOrder(int $orderId): array {
+ *         $eloquentOrder = Order::findOrFail($orderId);
+ *         $stateOrder = new StateOrder($orderId);
+ *         $stateOrder->setState($eloquentOrder->getStateObject());
+ *
+ *         $result = $stateOrder->process();
+ *
+ *         if ($result['success']) {
+ *             $eloquentOrder->status = $stateOrder->getStatus();
+ *             $eloquentOrder->save();
+ *         }
+ *
+ *         return $result;
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Putting Business Logic in Context
+ * ────────────────────────────
+ * PROBLEM: Order class has if-else for states
+ * SOLUTION: All state logic should be in state classes
+ *
+ * BAD:
+ * class Order {
+ *     public function process() {
+ *         if ($this->status === 'new') {
+ *             // logic here
+ *         } elseif ($this->status === 'processing') {
+ *             // more logic
+ *         }
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Order {
+ *     public function process() {
+ *         return $this->state->process($this);
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 2: States Knowing About Each Other
+ * ────────────────────────────
+ * PROBLEM: NewState references ProcessingState directly
+ * SOLUTION: This is actually OK! States control transitions
+ *
+ * This is fine:
+ * class NewState {
+ *     public function process(Order $order) {
+ *         $order->setState(new ProcessingState());
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 3: Not Using Interface
+ * ────────────────────────────
+ * PROBLEM: States don't implement common interface
+ * SOLUTION: Always use interface for type safety
+ *
+ * BAD:
+ * class NewState {
+ *     public function process() { }
+ * }
+ * class ProcessingState {
+ *     public function handle() { } // Different method name!
+ * }
+ *
+ * GOOD:
+ * interface OrderState {
+ *     public function process(Order $order): array;
+ * }
+ * class NewState implements OrderState { }
+ * class ProcessingState implements OrderState { }
+ */
+
+/**
+ * MISTAKE 4: Context Controlling Transitions
+ * ────────────────────────────
+ * PROBLEM: Order decides when to change state
+ * SOLUTION: States should control their own transitions
+ *
+ * BAD:
+ * class Order {
+ *     public function process() {
+ *         $result = $this->state->process($this);
+ *         $this->setState(new ProcessingState()); // Context deciding!
+ *     }
+ * }
+ *
+ * GOOD:
+ * class NewState {
+ *     public function process(Order $order) {
+ *         // State decides transition
+ *         $order->setState(new ProcessingState());
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 5: Too Many States
+ * ────────────────────────────
+ * PROBLEM: 20+ states makes it complex
+ * SOLUTION: Keep states reasonable (5-10 is good)
+ *
+ * If you have too many states, consider:
+ * - Combining similar states
+ * - Using substates
+ * - Different pattern might be better
+ */
+
+/**
+ * MISTAKE 6: States with Heavy Logic
+ * ────────────────────────────
+ * PROBLEM: State methods doing too much
+ * SOLUTION: Keep state methods simple, delegate to services
+ *
+ * BAD:
+ * class ProcessingState {
+ *     public function ship(Order $order) {
+ *         // 100 lines of shipping logic
+ *         // Calling external APIs
+ *         // Database operations
+ *         // Email sending
+ *     }
+ * }
+ *
+ * GOOD:
+ * class ProcessingState {
+ *     public function ship(Order $order) {
+ *         // Simple validation
+ *         if (!$this->canShip($order)) {
+ *             return ['success' => false];
+ *         }
+ *         // Delegate to service
+ *         $shippingService->ship($order);
+ *         // Change state
+ *         $order->setState(new ShippedState());
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 7: Forgetting to Save State
+ * ────────────────────────────
+ * PROBLEM: State changes but not persisted
+ * SOLUTION: Always save state changes to database
+ *
+ * BAD:
+ * $order->process(); // State changes in memory
+ * // Not saved to database!
+ *
+ * GOOD:
+ * $result = $order->process();
+ * if ($result['success']) {
+ *     $order->save(); // Persist to database
+ * }
+ */
+
+/**
+ * MISTAKE 8: Exposing Too Much Context API
+ * ────────────────────────────
+ * PROBLEM: Context exposes all its internals to states
+ * SOLUTION: Only expose what states actually need
+ *
+ * BAD:
+ * class Order {
+ *     public $internalData; // Public!
+ *     public function getPrivateStuff() { } // Too much!
+ * }
+ *
+ * GOOD:
+ * class Order {
+ *     private $internalData; // Private
+ *     public function setState(OrderState $state) { } // Only what's needed
+ *     public function getStatus() { }
+ * }
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep States Simple
+ * ────────────────────────────
+ * State methods should only handle transitions and validation
+ * Heavy logic should be in services
+ *
+ * State method should:
+ * - Validate if transition is allowed
+ * - Change to new state
+ * - Return result
+ *
+ * State method should NOT:
+ * - Connect to external APIs
+ * - Perform complex calculations
+ * - Handle multiple responsibilities
+ */
+
+/**
+ * BEST PRACTICE 2: Use Meaningful State Names
+ * ────────────────────────────
+ * Good: NewState, ProcessingState, ShippedState
+ * Bad: State1, StateA, S1
+ *
+ * Names should describe the state clearly
+ * Anyone reading code should understand what state means
+ */
+
+/**
+ * BEST PRACTICE 3: Document State Transitions
+ * ────────────────────────────
+ * Create a state diagram showing valid transitions
+ * Makes it easy to understand the flow
+ *
+ * Example documentation:
+ * New → process() → Processing
+ * New → cancel() → Cancelled
+ * Processing → ship() → Shipped
+ * Processing → cancel() → Cancelled
+ * Shipped → deliver() → Delivered
+ * Shipped → cancel() → NOT ALLOWED
+ */
+
+/**
+ * BEST PRACTICE 4: Validate Before Transition
+ * ────────────────────────────
+ * Check if transition is valid before changing state
+ * Return clear error messages
+ *
+ * Example:
+ * public function cancel(Order $order): array {
+ *     if (!$this->canCancel($order)) {
+ *         return ['success' => false, 'message' => 'Cannot cancel shipped order'];
+ *     }
+ *     $order->setState(new CancelledState());
+ *     return ['success' => true];
+ * }
+ */
+
+/**
+ * BEST PRACTICE 5: Test Each State Independently
+ * ────────────────────────────
+ * Unit test each state class separately
+ * Test all methods in each state
+ *
+ * Tests should cover:
+ * - Valid transitions
+ * - Invalid transitions
+ * - Edge cases
+ * - Error handling
+ */
+
+/**
+ * BEST PRACTICE 6: Use Dependency Injection
+ * ────────────────────────────
+ * If states need services, inject them
+ * Don't instantiate services inside states
+ *
+ * GOOD:
+ * class ProcessingState {
+ *     public function __construct(
+ *         private ShippingService $shippingService
+ *     ) {}
+ * }
+ */
+
+/**
+ * BEST PRACTICE 7: Keep State Transitions Explicit
+ * ────────────────────────────
+ * Don't hide state changes
+ * Make it clear when and why state changes
+ *
+ * GOOD:
+ * public function ship(Order $order): array {
+ *     // Clear transition
+ *     $order->setState(new ShippedState());
+ *     return ['success' => true, 'message' => 'Order shipped'];
+ * }
+ *
+ * BAD:
+ * public function ship(Order $order): array {
+ *     $this->someMethodThatHidesStateChange($order);
+ *     // Hidden transition - hard to trace!
+ * }
+ */
+
+/**
+ * BEST PRACTICE 8: Handle Edge Cases
+ * ────────────────────────────
+ * What if user tries invalid transition?
+ * Return helpful error messages
+ *
+ * Example:
+ * public function ship(Order $order): array {
+ *     return [
+ *         'success' => false,
+ *         'message' => 'Cannot ship order that hasn\'t been processed yet'
+ *     ];
+ * }
+ */
+
+// ============================================
+// STATE TRANSITION DIAGRAM
+// ============================================
+
+/**
+ * ORDER STATE MACHINE:
+ * ────────────────────────────
+ *
+ *                     ┌─────────┐
+ *                     │   New   │
+ *                     └────┬────┘
+ *                          │
+ *               ┌──────────┼──────────┐
+ *               │ process() │ cancel() │
+ *               ↓           ↓          │
+ *          ┌────────────┐  ┌──────────▼──┐
+ *          │Processing  │  │  Cancelled  │
+ *          └────┬───────┘  └─────────────┘
+ *               │
+ *       ┌───────┼────────┐
+ *       │ ship()│ cancel()│
+ *       ↓       ↓         │
+ *   ┌────────┐ ┌──────────▼──┐
+ *   │Shipped │ │  Cancelled  │
+ *   └───┬────┘ └─────────────┘
+ *       │
+ *       │ deliver()
+ *       ↓
+ *   ┌──────────┐
+ *   │Delivered │ (final state)
+ *   └──────────┘
+ *
+ * ALLOWED TRANSITIONS:
+ * - New → Processing (process)
+ * - New → Cancelled (cancel)
+ * - Processing → Shipped (ship)
+ * - Processing → Cancelled (cancel)
+ * - Shipped → Delivered (deliver)
+ *
+ * FORBIDDEN TRANSITIONS:
+ * - Shipped → Cancelled (cannot cancel shipped)
+ * - Delivered → anything (final state)
+ * - New → Shipped (must process first)
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * STATE vs STRATEGY
+ * ────────────────────────────
+ * STATE:
+ * - Behavior changes based on internal state
+ * - State transitions automatically
+ * - States know about each other
+ * - Example: Order going through stages
+ *
+ * STRATEGY:
+ * - Behavior selected by client
+ * - No automatic transitions
+ * - Strategies independent
+ * - Example: Payment methods, pricing tiers
+ *
+ * KEY DIFFERENCE:
+ * State changes itself, Strategy is changed by client
+ *
+ * STATE vs COMMAND
+ * ────────────────────────────
+ * STATE:
+ * - Defines behavior for different states
+ * - Focused on "being" in a state
+ *
+ * COMMAND:
+ * - Encapsulates actions/requests
+ * - Focused on "doing" something
+ *
+ * STATE vs CHAIN OF RESPONSIBILITY
+ * ────────────────────────────
+ * STATE:
+ * - One state handles request at a time
+ * - State changes after handling
+ *
+ * CHAIN:
+ * - Request passes through chain
+ * - First handler that can handle it does
+ *
+ * STATE vs OBSERVER
+ * ────────────────────────────
+ * STATE:
+ * - Object behavior changes with state
+ * - State transitions are explicit
+ *
+ * OBSERVER:
+ * - Multiple objects react to state change
+ * - State change triggers notifications
+ */
+
+// ============================================
+// TESTING STATE PATTERN
+// ============================================
+
+/**
+ * UNIT TEST EXAMPLES
+ * ────────────────────────────
+ *
+ * TEST 1: New order can be processed
+ * - Create order in New state
+ * - Call process()
+ * - Assert state changes to Processing
+ * - Assert returns success
+ *
+ * TEST 2: New order can be cancelled
+ * - Create order in New state
+ * - Call cancel()
+ * - Assert state changes to Cancelled
+ * - Assert returns success
+ *
+ * TEST 3: New order cannot be shipped
+ * - Create order in New state
+ * - Call ship()
+ * - Assert state remains New
+ * - Assert returns failure
+ *
+ * TEST 4: Processing order can be shipped
+ * - Create order in Processing state
+ * - Call ship()
+ * - Assert state changes to Shipped
+ * - Assert returns success
+ *
+ * TEST 5: Shipped order cannot be cancelled
+ * - Create order in Shipped state
+ * - Call cancel()
+ * - Assert state remains Shipped
+ * - Assert returns failure
+ *
+ * TEST 6: Shipped order can be delivered
+ * - Create order in Shipped state
+ * - Call deliver()
+ * - Assert state changes to Delivered
+ * - Assert returns success
+ *
+ * INTEGRATION TESTS:
+ * ────────────────────────────
+ * - Test full order flow: New → Processing → Shipped → Delivered
+ * - Test cancellation flow: New → Cancelled
+ * - Test invalid transitions
+ * - Test state persistence to database
+ */
+
+// ============================================
+// ADDING A NEW STATE (EXAMPLE)
+// ============================================
+
+/**
+ * WANT TO ADD "ON HOLD" STATE?
+ * Just create a new state class!
+ *
+ * Steps:
+ * 1. Create OnHoldState class
+ * 2. Implement OrderState interface
+ * 3. Define behavior for each method
+ * 4. Update state transitions
+ *
+ * Example:
+ * class OnHoldState implements OrderState {
+ *     public function process(Order $order): array {
+ *         // Resume to processing
+ *         $order->setState(new ProcessingState());
+ *         return ['success' => true];
+ *     }
+ *
+ *     public function cancel(Order $order): array {
+ *         // Can cancel from on hold
+ *         $order->setState(new CancelledState());
+ *         return ['success' => true];
+ *     }
+ *
+ *     public function ship(Order $order): array {
+ *         // Cannot ship from on hold
+ *         return ['success' => false, 'message' => 'Cannot ship order on hold'];
+ *     }
+ * }
+ *
+ * Add transition in ProcessingState:
+ * public function putOnHold(Order $order): array {
+ *     $order->setState(new OnHoldState());
+ *     return ['success' => true];
+ * }
+ *
+ * THAT'S IT! No need to modify existing states!
+ * Open/Closed Principle achieved! ✅
+ */
+
+// ============================================
+// QUICK REFERENCE CHECKLIST
+// ============================================
+
+/**
+ * IMPLEMENTATION CHECKLIST:
+ * ────────────────────────────
+ *
+ * □ Create State interface with all methods
+ * □ Create Concrete State classes for each state
+ * □ Each state implements all interface methods
+ * □ Each state handles its own behavior
+ * □ States control transitions (call context->setState)
+ * □ Create Context class (e.g., Order)
+ * □ Context has state property
+ * □ Context delegates to state methods
+ * □ Context provides setState() method
+ * □ Start with initial state in constructor
+ * □ Test each state independently
+ * □ Document state transitions
+ * □ Draw state diagram
+ *
+ * LARAVEL INTEGRATION CHECKLIST:
+ * ────────────────────────────
+ *
+ * □ Store state as string in database
+ * □ Create helper to restore state object
+ * □ Create Service class for state operations
+ * □ Controllers call service methods
+ * □ Service updates database after state change
+ * □ Add validation in controller
+ * □ Return appropriate HTTP responses
+ * □ Add tests for all transitions
+ */
+
+// ============================================
+// FOLDER STRUCTURE
+// ============================================
+
+/**
+ * app/
+ * └── State/
+ *    ├── OrderState.php        // State interface
+ *    ├── NewState.php          // Concrete state: New
+ *    ├── ProcessingState.php   // Concrete state: Processing
+ *    ├── ShippedState.php      // Concrete state: Shipped
+ *    ├── DeliveredState.php    // Concrete state: Delivered
+ *    ├── CancelledState.php    // Concrete state: Cancelled
+
