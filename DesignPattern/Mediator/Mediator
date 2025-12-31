@@ -1,0 +1,591 @@
+
+// ============================================
+// MEDIATOR DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS MEDIATOR PATTERN?
+ *
+ * The Mediator Pattern defines an object that encapsulates how a set of objects interact.
+ * Instead of objects talking directly to each other, they communicate through a mediator.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of Air Traffic Control (ATC):
+ * - Planes don't talk directly to each other
+ * - All planes communicate through ATC
+ * - ATC coordinates all planes
+ * - Planes only know about ATC, not other planes
+ * - If plane needs info, asks ATC
+ *
+ * ANOTHER ANALOGY:
+ * Chat room / Group chat:
+ * - Users don't send messages directly to each other
+ * - Users send messages to chat room
+ * - Chat room distributes to all users
+ * - Users don't need to know about other users
+ * - Chat room manages everything
+ *
+ * MORE ANALOGIES:
+ * - Auction house: Bidders → Auctioneer → Other bidders
+ * - Radio tower: Phones → Tower → Other phones
+ * - Switchboard operator: Caller → Operator → Receiver
+ * - Stock exchange: Trader → Exchange → Other traders
+ *
+ * COMPONENTS:
+ * 1. Mediator Interface: Defines communication interface
+ * 2. Concrete Mediator: Implements coordination logic
+ * 3. Colleague: Objects that communicate via mediator
+ * 4. Concrete Colleagues: Actual communicating objects
+ *
+ * WHEN TO USE:
+ * - Objects communicate in complex ways
+ * - Want to avoid tight coupling between objects
+ * - Want to centralize communication logic
+ * - Objects should be reusable without dependencies
+ * - Many-to-many relationships between objects
+ * - Want to change interaction dynamically
+ *
+ * WHEN NOT TO USE:
+ * - Simple one-to-one communication
+ * - Objects naturally belong together
+ * - Mediator becomes too complex (god object)
+ * - Direct communication is clearer
+ *
+ * BENEFITS:
+ * ✅ Reduces coupling between objects
+ * ✅ Centralizes control logic
+ * ✅ Simplifies object protocols
+ * ✅ Easier to understand interactions
+ * ✅ Easy to add new colleagues
+ * ✅ Reusable colleagues
+ * ✅ Single Responsibility
+ *
+ * DRAWBACKS:
+ * ❌ Mediator can become complex (god object)
+ * ❌ Single point of failure
+ * ❌ Can be hard to maintain if too many colleagues
+ * ❌ Additional layer of indirection
+ */
+
+// ============================================
+// STRUCTURE OF MEDIATOR PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Mediator Interface                │
+ * ├─────────────────────────────────────────┤
+ * │ + notify(sender, event)                 │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *                   │
+ * ┌─────────────────────────────────────────┐
+ * │    Concrete Mediator (ChatRoom)        │
+ * ├─────────────────────────────────────────┤
+ * │ - colleagues: Array                     │
+ * ├─────────────────────────────────────────┤
+ * │ + register(colleague)                   │
+ * │ + notify(sender, event)                 │
+ * └─────────────────────────────────────────┘
+ *           ↑   ↑   ↑
+ *           │   │   │ know mediator
+ *           │   │   │
+ *     ┌─────┘   │   └─────┐
+ *     │         │         │
+ * ┌────────┐ ┌────────┐ ┌────────┐
+ * │User A  │ │User B  │ │User C  │
+ * ├────────┤ ├────────┤ ├────────┤
+ * │-mediator│ │-mediator│ │-mediator│
+ * ├────────┤ ├────────┤ ├────────┤
+ * │+send() │ │+send() │ │+send() │
+ * │+receive│ │+receive│ │+receive│
+ * └────────┘ └────────┘ └────────┘
+ *
+ * Users don't know about each other
+ * They only know about ChatRoom
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW MEDIATOR PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────────────────
+ * 1. Create mediator (ChatRoom)
+ *    → $chatRoom = new ChatRoom()
+ *
+ * 2. Create colleagues (Users)
+ *    → $alice = new User('Alice', $chatRoom)
+ *    → $bob = new User('Bob', $chatRoom)
+ *
+ * 3. Register colleagues with mediator
+ *    → $chatRoom->register($alice)
+ *    → $chatRoom->register($bob)
+ *
+ * COMMUNICATION PHASE:
+ * ────────────────────────────────────────
+ * 4. User sends message
+ *    → $alice->send("Hello")
+ *
+ * 5. User doesn't send directly to others!
+ *    Instead, tells mediator:
+ *    → $this->mediator->notify($this, "Hello")
+ *
+ * 6. Mediator decides what to do
+ *    → Loop through all users
+ *    → Send to everyone except sender
+ *
+ * 7. Other users receive message
+ *    → $bob->receive("Hello", $alice)
+ *    → Message delivered!
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Users don't talk directly
+ * - All communication through mediator
+ * - Mediator controls distribution
+ * - Users are decoupled
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE MEDIATOR
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Central object that coordinates communication
+ *
+ * RESPONSIBILITIES:
+ * - Register colleagues
+ * - Receive messages from colleagues
+ * - Distribute messages to appropriate colleagues
+ * - Manage interaction logic
+ *
+ * WHAT IT KNOWS:
+ * - All colleagues
+ * - How colleagues should interact
+ *
+ * WHAT IT DOESN'T KNOW:
+ * - Internal state of colleagues
+ * - Colleague implementation details
+ *
+ * EXAMPLE:
+ * class ChatRoom implements Mediator {
+ *     private $users = [];
+ *
+ *     public function register(User $user) {
+ *         $this->users[] = $user;
+ *     }
+ *
+ *     public function send($message, $from, $to = null) {
+ *         // Distribution logic here
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 2: THE COLLEAGUE
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Object that communicates via mediator
+ *
+ * CHARACTERISTICS:
+ * - Has reference to mediator
+ * - Sends messages to mediator
+ * - Receives messages from mediator
+ * - Doesn't know about other colleagues
+ *
+ * WHAT IT KNOWS:
+ * - Its mediator
+ * - How to send via mediator
+ *
+ * WHAT IT DOESN'T KNOW:
+ * - Other colleagues
+ * - How messages are distributed
+ * - Communication logic
+ *
+ * EXAMPLE:
+ * class User {
+ *     private $mediator;
+ *
+ *     public function send($message) {
+ *         $this->mediator->notify($this, $message);
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 3: DECOUPLING
+ * ────────────────────────────────────────
+ *
+ * WITHOUT MEDIATOR:
+ * UserA → knows UserB, UserC, UserD
+ * UserB → knows UserA, UserC, UserD
+ * UserC → knows UserA, UserB, UserD
+ *
+ * Result: N × (N-1) connections! (Spaghetti code)
+ *
+ * WITH MEDIATOR:
+ * UserA → knows only ChatRoom
+ * UserB → knows only ChatRoom
+ * UserC → knows only ChatRoom
+ * ChatRoom → knows all users
+ *
+ * Result: N connections! (Clean)
+ *
+ * BENEFITS:
+ * - Add new user? No changes to existing users
+ * - Remove user? No impact on others
+ * - Change communication? Change mediator only
+ */
+
+/**
+ * KEY CONCEPT 4: CENTRALIZED CONTROL
+ * ────────────────────────────────────────
+ *
+ * MEDIATOR CONTROLS:
+ * - Who can send to whom
+ * - Message format
+ * - Delivery order
+ * - Filtering/moderation
+ * - Logging
+ * - Broadcasting rules
+ *
+ * EXAMPLE RULES:
+ * - Private messages (one-to-one)
+ * - Group messages (one-to-many)
+ * - Broadcast (one-to-all)
+ * - Muted users can't send
+ * - Block list
+ *
+ * All logic in ONE place!
+ */
+
+// ============================================
+// YOUR USE CASE: CHAT APPLICATION
+// ============================================
+
+/**
+ * CHAT APPLICATION EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Multiple users need to chat
+ * - Users can send messages to others
+ * - Can be direct (1-to-1) or group (1-to-many)
+ * - Don't want users coupled to each other
+ * - Want to add features (mute, block, etc.)
+ *
+ * SOLUTION WITH MEDIATOR:
+ *
+ * Mediator: ChatRoom
+ * - Manages all users
+ * - Routes messages
+ * - Implements chat rules
+ *
+ * Colleagues: Users
+ * - Send messages via ChatRoom
+ * - Receive messages from ChatRoom
+ * - Don't know about other users
+ *
+ * BENEFITS:
+ * - Add new user? No changes to existing users
+ * - Add features (mute, block)? Change ChatRoom only
+ * - Users are reusable (can join different chat rooms)
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: GUI COMPONENTS
+ * ────────────────────────────────────────
+ * Mediator: DialogBox
+ * Colleagues: Buttons, TextFields, Checkboxes
+ * - Button click enables/disables other components
+ * - TextField change updates label
+ * - All coordination through dialog
+ *
+ * EXAMPLE 2: FLIGHT CONTROL
+ * ────────────────────────────────────────
+ * Mediator: ControlTower
+ * Colleagues: Airplanes
+ * - Planes request landing permission
+ * - Tower coordinates all planes
+ * - Prevents collisions
+ *
+ * EXAMPLE 3: AUCTION SYSTEM
+ * ────────────────────────────────────────
+ * Mediator: Auctioneer
+ * Colleagues: Bidders
+ * - Bidders place bids through auctioneer
+ * - Auctioneer announces highest bid
+ * - Bidders don't interact directly
+ *
+ * EXAMPLE 4: SMART HOME
+ * ────────────────────────────────────────
+ * Mediator: HomeController
+ * Colleagues: Lights, Thermostat, Alarm, Camera
+ * - Motion detected → Turn on lights
+ * - Temperature high → Turn on AC
+ * - All rules in controller
+ *
+ * EXAMPLE 5: MULTIPLAYER GAME
+ * ────────────────────────────────────────
+ * Mediator: GameServer
+ * Colleagues: Players
+ * - Players send actions to server
+ * - Server broadcasts to all players
+ * - Server validates moves
+ */
+
+// ============================================
+// MEDIATOR PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Event Dispatcher (Built-in Mediator!)
+ *
+ * // Colleagues send events to dispatcher
+ * event(new UserRegistered($user));
+ *
+ * // Dispatcher notifies listeners
+ * // Listeners don't know about each other
+ *
+ * EXAMPLE 2: Broadcasting (Real-time Chat)
+ *
+ * // User sends message
+ * broadcast(new MessageSent($message));
+ *
+ * // Laravel broadcasts to all connected users
+ * // Users don't send directly to each other
+ *
+ * EXAMPLE 3: Queue System
+ *
+ * // Jobs don't know about each other
+ * dispatch(new SendEmail($user));
+ * dispatch(new ProcessPayment($order));
+ *
+ * // Queue manager coordinates execution
+ *
+ * EXAMPLE 4: Service Container
+ *
+ * // Classes don't instantiate dependencies
+ * // Container mediates dependency injection
+ * app(UserService::class);
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: God Object Mediator
+ * ────────────────────────────────────────
+ * PROBLEM: Mediator does too much, knows too much
+ * SOLUTION: Keep mediator focused, delegate complex logic
+ *
+ * MISTAKE 2: Colleagues Know Each Other
+ * ────────────────────────────────────────
+ * PROBLEM: Defeats purpose of mediator
+ * SOLUTION: Colleagues should ONLY know mediator
+ *
+ * MISTAKE 3: Business Logic in Colleagues
+ * ────────────────────────────────────────
+ * PROBLEM: Interaction logic scattered
+ * SOLUTION: Keep interaction logic in mediator
+ *
+ * MISTAKE 4: Too Many Colleagues
+ * ────────────────────────────────────────
+ * PROBLEM: Mediator becomes complex
+ * SOLUTION: Split into multiple mediators
+ *
+ * MISTAKE 5: Mediator Knows Colleague Internals
+ * ────────────────────────────────────────
+ * PROBLEM: Tight coupling
+ * SOLUTION: Colleagues provide interface, hide internals
+ *
+ * MISTAKE 6: Not Using Interfaces
+ * ────────────────────────────────────────
+ * PROBLEM: Hard to test, inflexible
+ * SOLUTION: Define Mediator and Colleague interfaces
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Mediator Focused
+ * ────────────────────────────────────────
+ * Mediator coordinates, doesn't do everything
+ *
+ * BEST PRACTICE 2: Use Interfaces
+ * ────────────────────────────────────────
+ * Define Mediator and Colleague interfaces
+ *
+ * BEST PRACTICE 3: Meaningful Names
+ * ────────────────────────────────────────
+ * Good: ChatRoomMediator, FlightControlTower
+ * Bad: Mediator1, Manager
+ *
+ * BEST PRACTICE 4: Colleague Independence
+ * ────────────────────────────────────────
+ * Colleagues should work without knowing others
+ *
+ * BEST PRACTICE 5: Event-Driven
+ * ────────────────────────────────────────
+ * Use events/notifications for communication
+ *
+ * BEST PRACTICE 6: Limit Colleague Count
+ * ────────────────────────────────────────
+ * Too many colleagues? Split mediator
+ *
+ * BEST PRACTICE 7: Document Interactions
+ * ────────────────────────────────────────
+ * Explain how mediator coordinates
+ *
+ * BEST PRACTICE 8: Test Mediator Logic
+ * ────────────────────────────────────────
+ * Test coordination rules thoroughly
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * MEDIATOR vs OBSERVER
+ * ────────────────────────────────────────
+ * Mediator: Centralized, bidirectional communication
+ * Observer: Distributed, one-way notification
+ * Mediator: Colleagues know mediator
+ * Observer: Subjects don't know observers
+ *
+ * MEDIATOR vs FACADE
+ * ────────────────────────────────────────
+ * Mediator: Coordinates communication between objects
+ * Facade: Simplifies interface to subsystem
+ * Mediator: Objects know mediator
+ * Facade: Objects don't know facade exists
+ *
+ * MEDIATOR vs COMMAND
+ * ────────────────────────────────────────
+ * Mediator: Manages communication
+ * Command: Encapsulates request
+ * Can combine: Commands sent through mediator
+ *
+ * MEDIATOR vs CHAIN OF RESPONSIBILITY
+ * ────────────────────────────────────────
+ * Mediator: Centralized routing
+ * Chain: Decentralized, linear processing
+ * Mediator: Knows all colleagues
+ * Chain: Handler knows only next handler
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR MEDIATOR PATTERN:
+ * ────────────────────────────────────────
+ *
+ * □ Create Mediator interface
+ * □ Define notify/send methods
+ * □ Create Concrete Mediator
+ * □ Add colleague registration
+ * □ Implement routing logic
+ * □ Create Colleague base class/interface
+ * □ Add mediator reference
+ * □ Create Concrete Colleagues
+ * □ Implement send via mediator
+ * □ Implement receive from mediator
+ * □ Register colleagues with mediator
+ * □ Test communication flow
+ * □ Test edge cases (no colleagues, etc.)
+ * □ Document interaction rules
+ * □ Keep mediator focused
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Consider using Events system
+ * □ Use Broadcasting for real-time
+ * □ Use Queue for async communication
+ * □ Implement proper interfaces
+ * □ Use dependency injection
+ * □ Add proper logging
+ * □ Test with feature tests
+ * □ Document mediator responsibilities
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * MEDIATOR PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Central object coordinates communication between objects
+ *
+ * WHY: Reduce coupling, centralize interaction logic
+ *
+ * WHEN: Complex many-to-many relationships
+ *
+ * HOW:
+ * 1. Create mediator
+ * 2. Colleagues register with mediator
+ * 3. Colleagues send via mediator
+ * 4. Mediator routes to appropriate colleagues
+ * 5. Colleagues receive from mediator
+ *
+ * COMPONENTS:
+ * - Mediator: Central coordinator
+ * - Colleagues: Communicating objects
+ * - Know mediator, not each other
+ *
+ * BENEFITS:
+ * ✅ Reduces coupling
+ * ✅ Centralizes control
+ * ✅ Easy to add colleagues
+ * ✅ Reusable colleagues
+ * ✅ Single Responsibility
+ *
+ * USE WHEN:
+ * ✅ Many-to-many communication
+ * ✅ Want to avoid tight coupling
+ * ✅ Centralize interaction logic
+ * ✅ Objects should be reusable
+ *
+ * DON'T USE WHEN:
+ * ❌ Simple communication
+ * ❌ Mediator becomes god object
+ * ❌ One-to-one relationships
+ * ❌ Direct communication clearer
+ *
+ * KEY PRINCIPLE:
+ * "Don't call others, call the mediator"
+ *
+ * REMEMBER:
+ * - Colleagues don't know each other
+ * - All communication through mediator
+ * - Mediator controls distribution
+ * - Reduces N×N to N connections
+ * - Laravel Events is this pattern
+ */
