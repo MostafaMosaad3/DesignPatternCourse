@@ -1,0 +1,1263 @@
+// ============================================
+// COMMAND DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS COMMAND PATTERN?
+ *
+ * The Command Pattern is a behavioral design pattern that turns a request
+ * into a stand-alone object containing all information about the request.
+ * This transformation lets you pass requests as method arguments, delay
+ * or queue a request's execution, and support undoable operations.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of ordering food at a restaurant:
+ * - You (Client) don't go to the kitchen directly
+ * - You give your order to the waiter (Invoker)
+ * - Waiter writes order on paper (Command object)
+ * - Waiter gives order to chef (Receiver)
+ * - Chef prepares the food
+ * - You can cancel order before it's prepared (Undo)
+ *
+ * ANOTHER ANALOGY:
+ * TV Remote Control:
+ * - Remote has buttons (Invoker)
+ * - Each button triggers a command (Command object)
+ * - TV executes the command (Receiver)
+ * - Remote doesn't know how TV works internally
+ * - You can have multiple remotes controlling same TV
+ * - Can record button presses for later (Macro)
+ *
+ * MORE ANALOGIES:
+ * - Task Queue: Tasks are commands waiting to be executed
+ * - Undo in Text Editor: Each edit is a command that can be undone
+ * - Smart Home App: Buttons send commands to devices
+ * - Voice Assistant: Voice commands translated to actions
+ * - Job Scheduler: Jobs are commands scheduled for execution
+ *
+ * COMPONENTS:
+ * 1. Command: Interface declaring execute() and undo()
+ * 2. ConcreteCommand: Implements Command, knows Receiver
+ * 3. Receiver: The object that actually performs the work
+ * 4. Invoker: Asks command to execute (remote, button, app)
+ * 5. Client: Creates command and sets its receiver
+ *
+ * WHEN TO USE:
+ * - When you want to parameterize objects with operations
+ * - When you need to queue operations for later execution
+ * - When you need undo/redo functionality
+ * - When you want to log operations
+ * - When you need to support transactional operations
+ * - When you want to decouple sender from receiver
+ * - When you need macro commands (composite operations)
+ *
+ * WHEN NOT TO USE:
+ * - Simple direct calls are sufficient
+ * - When overhead of creating command objects is too high
+ * - When undo/redo is not needed and operations are simple
+ * - When there's only one receiver and one invoker
+ *
+ * BENEFITS:
+ * ✅ Single Responsibility Principle: Separates invoker from receiver
+ * ✅ Open/Closed Principle: Add new commands without changing existing code
+ * ✅ Undo/Redo: Easy to implement reversible operations
+ * ✅ Deferred Execution: Execute commands at scheduled time
+ * ✅ Macro Commands: Combine simple commands into complex ones
+ * ✅ Command History: Keep track of executed commands
+ * ✅ Queue Operations: Store commands for batch processing
+ * ✅ Logging: Log all operations for audit trail
+ *
+ * DRAWBACKS:
+ * ❌ Increased complexity: Need to create command class for each operation
+ * ❌ More classes: Can lead to code bloat
+ * ❌ Indirect execution: Commands add a layer of indirection
+ * ❌ Memory overhead: Storing command history uses memory
+ * ❌ May be overkill for simple operations
+ */
+
+// ============================================
+// STRUCTURE OF COMMAND PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ *     ┌─────────────────┐
+ *     │     Client      │
+ *     └────────┬────────┘
+ *              │ creates
+ *              ↓
+ * ┌─────────────────────────────────────┐
+ * │      Command Interface              │
+ * ├─────────────────────────────────────┤
+ * │ + execute()                         │
+ * │ + undo()                            │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┼──────────┐
+ *        │          │          │
+ * ┌──────────┐ ┌──────────┐ ┌──────────┐
+ * │Command A │ │Command B │ │Command C │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │-receiver │ │-receiver │ │-receiver │
+ * ├──────────┤ ├──────────┤ ├──────────┤
+ * │+execute()│ │+execute()│ │+execute()│
+ * │+undo()   │ │+undo()   │ │+undo()   │
+ * └────┬─────┘ └────┬─────┘ └────┬─────┘
+ *      │            │            │
+ *      │ calls      │ calls      │ calls
+ *      ↓            ↓            ↓
+ * ┌─────────┐  ┌─────────┐  ┌─────────┐
+ * │Receiver │  │Receiver │  │Receiver │
+ * │   A     │  │   B     │  │   C     │
+ * ├─────────┤  ├─────────┤  ├─────────┤
+ * │+action()│  │+action()│  │+action()│
+ * └─────────┘  └─────────┘  └─────────┘
+ *
+ *      ↑
+ *      │ stored in
+ *      │
+ * ┌─────────────────────────────────────┐
+ * │          Invoker                    │
+ * ├─────────────────────────────────────┤
+ * │ - command: Command                  │
+ * │ - history: Array                    │
+ * ├─────────────────────────────────────┤
+ * │ + setCommand(Command)               │
+ * │ + executeCommand()                  │
+ * │ + undo()                            │
+ * └─────────────────────────────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW COMMAND PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (happens once):
+ * ────────────────────────────
+ * 1. Client creates Receiver objects
+ *    → Example: Light, TV, Door objects
+ *
+ * 2. Client creates Command objects
+ *    → Pass receiver to each command
+ *    → Example: LightOnCommand(light)
+ *
+ * 3. Client creates Invoker
+ *    → Example: RemoteControl
+ *
+ * 4. Client sets commands in invoker
+ *    → Example: remote.setCommand(1, lightOnCommand)
+ *
+ * EXECUTION PHASE (happens when user acts):
+ * ────────────────────────────
+ * 5. User triggers invoker
+ *    → Example: User presses button 1
+ *    → invoker.pressButton(1)
+ *
+ * 6. Invoker gets the command
+ *    → command = commands[1]
+ *    → command is LightOnCommand
+ *
+ * 7. Invoker executes the command
+ *    → command.execute()
+ *
+ * 8. Command calls receiver's method
+ *    → LightOnCommand calls: light.turnOn()
+ *
+ * 9. Receiver performs actual work
+ *    → Light turns on
+ *
+ * 10. Invoker stores command in history (optional)
+ *     → For undo functionality
+ *
+ * UNDO PHASE (optional):
+ * ────────────────────────────
+ * 11. User wants to undo
+ *     → invoker.undo()
+ *
+ * 12. Invoker gets last command from history
+ *     → command = history.pop()
+ *
+ * 13. Invoker calls undo on command
+ *     → command.undo()
+ *
+ * 14. Command reverses the action
+ *     → LightOnCommand calls: light.turnOff()
+ *
+ * 15. Receiver performs reverse action
+ *     → Light turns off
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE COMMAND
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * An object that encapsulates a request as an object
+ *
+ * WHAT DOES IT DO?
+ * - Stores all information needed to execute an action
+ * - Knows which receiver to call
+ * - Knows which method to call on receiver
+ * - Can execute and undo operations
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't perform the actual work (receiver does)
+ * - Doesn't know when it will be executed
+ * - Doesn't know who will execute it
+ *
+ * KEY METHODS:
+ * - execute(): Performs the action
+ * - undo(): Reverses the action
+ *
+ * THINK OF IT AS:
+ * A written order given to a waiter
+ */
+
+/**
+ * KEY CONCEPT 2: THE RECEIVER
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The object that actually performs the work
+ *
+ * WHAT DOES IT DO?
+ * - Contains business logic
+ * - Performs actual operations
+ * - Knows how to do the work
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't know about commands
+ * - Doesn't know about invoker
+ * - Doesn't know when methods will be called
+ *
+ * KEY METHODS:
+ * - action(): The actual work method
+ * - Example: turnOn(), turnOff(), lock(), unlock()
+ *
+ * THINK OF IT AS:
+ * The chef who prepares the food
+ */
+
+/**
+ * KEY CONCEPT 3: THE INVOKER
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The object that triggers command execution
+ *
+ * WHAT DOES IT DO?
+ * - Stores commands
+ * - Triggers command execution
+ * - Maintains command history
+ * - Handles undo/redo
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't know about receivers
+ * - Doesn't know command implementation details
+ * - Doesn't perform actual work
+ *
+ * KEY METHODS:
+ * - setCommand(): Store command
+ * - executeCommand(): Run command
+ * - undo(): Reverse last command
+ *
+ * THINK OF IT AS:
+ * The waiter who takes and delivers orders
+ */
+
+/**
+ * KEY CONCEPT 4: THE CLIENT
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The code that sets up the pattern
+ *
+ * WHAT DOES IT DO?
+ * - Creates receiver objects
+ * - Creates command objects
+ * - Connects commands to receivers
+ * - Assigns commands to invoker
+ *
+ * THINK OF IT AS:
+ * The restaurant manager who sets up the system
+ */
+
+/**
+ * KEY CONCEPT 5: DECOUPLING
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Separating the requester from the performer
+ *
+ * BENEFITS:
+ * - Invoker doesn't know about receiver
+ * - Can change receiver without changing invoker
+ * - Can change invoker without changing receiver
+ * - Can reuse commands with different invokers
+ *
+ * EXAMPLE:
+ * Same LightOnCommand can be used by:
+ * - Remote Control
+ * - Voice Assistant
+ * - Mobile App
+ * - Scheduled Timer
+ */
+
+/**
+ * KEY CONCEPT 6: COMMAND AS FIRST-CLASS OBJECT
+ * ──────────────────────────────
+ *
+ * WHAT DOES IT MEAN?
+ * Commands are objects that can be:
+ * - Stored in variables
+ * - Passed as parameters
+ * - Returned from functions
+ * - Stored in arrays/collections
+ * - Serialized and sent over network
+ *
+ * THIS ENABLES:
+ * - Command queues
+ * - Command history
+ * - Scheduled execution
+ * - Remote execution
+ * - Transaction support
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: TEXT EDITOR
+ * ────────────────────────────
+ * Receivers: Document, Clipboard
+ * Commands:
+ * - CopyCommand
+ * - PasteCommand
+ * - DeleteCommand
+ * - UndoCommand
+ * - RedoCommand
+ * Invoker: Toolbar buttons, keyboard shortcuts
+ * Benefit: Full undo/redo support
+ *
+ * EXAMPLE 2: SMART HOME AUTOMATION
+ * ────────────────────────────
+ * Receivers: Light, Thermostat, Door, Camera
+ * Commands:
+ * - TurnOnLightCommand
+ * - SetTemperatureCommand
+ * - LockDoorCommand
+ * - StartRecordingCommand
+ * Invokers: Mobile app, Voice assistant, Timer
+ * Benefit: Multiple control methods
+ *
+ * EXAMPLE 3: GAME CONTROLS
+ * ────────────────────────────
+ * Receivers: Player, Camera, Game
+ * Commands:
+ * - MoveCommand
+ * - JumpCommand
+ * - AttackCommand
+ * - SaveGameCommand
+ * Invoker: Keyboard, Gamepad, Touch controls
+ * Benefit: Remappable controls, replay system
+ *
+ * EXAMPLE 4: DATABASE TRANSACTIONS
+ * ────────────────────────────
+ * Receivers: Database connections
+ * Commands:
+ * - InsertCommand
+ * - UpdateCommand
+ * - DeleteCommand
+ * - CommitCommand
+ * - RollbackCommand
+ * Invoker: Transaction manager
+ * Benefit: Rollback support, transaction history
+ *
+ * EXAMPLE 5: TASK SCHEDULING
+ * ────────────────────────────
+ * Receivers: Email service, Report generator
+ * Commands:
+ * - SendEmailCommand
+ * - GenerateReportCommand
+ * - BackupDatabaseCommand
+ * Invoker: Scheduler, Queue worker
+ * Benefit: Deferred execution, retry logic
+ *
+ * EXAMPLE 6: RESTAURANT ORDER SYSTEM
+ * ────────────────────────────
+ * Receivers: Kitchen, Bar, Cashier
+ * Commands:
+ * - CookOrderCommand
+ * - MakeDrinkCommand
+ * - ProcessPaymentCommand
+ * Invoker: Waiter tablet
+ * Benefit: Order queue, cancellation support
+ *
+ * EXAMPLE 7: GUI FRAMEWORK
+ * ────────────────────────────
+ * Receivers: Window, Panel, TextField
+ * Commands:
+ * - OpenWindowCommand
+ * - CloseWindowCommand
+ * - SaveFormCommand
+ * Invoker: Buttons, Menu items
+ * Benefit: Event handling, macro support
+ */
+
+// ============================================
+// COMMAND PATTERN VARIATIONS
+// ============================================
+
+/**
+ * VARIATION 1: SIMPLE COMMAND
+ * ────────────────────────────
+ * Just execute(), no undo
+ * Use when: No need to reverse operations
+ *
+ * interface Command {
+ *     public function execute(): void;
+ * }
+ *
+ * VARIATION 2: UNDOABLE COMMAND
+ * ────────────────────────────
+ * Has both execute() and undo()
+ * Use when: Need to reverse operations
+ *
+ * interface Command {
+ *     public function execute(): void;
+ *     public function undo(): void;
+ * }
+ *
+ * VARIATION 3: MACRO COMMAND (COMPOSITE)
+ * ────────────────────────────
+ * Command that contains multiple commands
+ * Use when: Need to execute multiple operations together
+ *
+ * class MacroCommand implements Command {
+ *     private array $commands;
+ *
+ *     public function execute(): void {
+ *         foreach ($this->commands as $cmd) {
+ *             $cmd->execute();
+ *         }
+ *     }
+ * }
+ *
+ * VARIATION 4: QUEUED COMMAND
+ * ────────────────────────────
+ * Commands stored in queue for later execution
+ * Use when: Need background processing
+ *
+ * class CommandQueue {
+ *     private array $queue = [];
+ *
+ *     public function add(Command $cmd): void {
+ *         $this->queue[] = $cmd;
+ *     }
+ *
+ *     public function process(): void {
+ *         foreach ($this->queue as $cmd) {
+ *             $cmd->execute();
+ *         }
+ *     }
+ * }
+ *
+ * VARIATION 5: LOGGED COMMAND
+ * ────────────────────────────
+ * Commands that log their execution
+ * Use when: Need audit trail
+ *
+ * class LoggedCommand implements Command {
+ *     public function execute(): void {
+ *         Log::info('Executing command');
+ *         // actual work
+ *     }
+ * }
+ *
+ * VARIATION 6: PARAMETERIZED COMMAND
+ * ────────────────────────────
+ * Commands that accept parameters
+ * Use when: Need flexible commands
+ *
+ * class SetVolumeCommand implements Command {
+ *     private int $volume;
+ *
+ *     public function __construct(int $volume) {
+ *         $this->volume = $volume;
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMAND PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL'S IMPLEMENTATION: JOBS & QUEUES
+ * ────────────────────────────
+ *
+ * Laravel has built-in Command Pattern support!
+ *
+ * MAPPING:
+ * Command Pattern    →    Laravel
+ * ─────────────────────────────────
+ * Command            →    Job
+ * execute()          →    handle()
+ * Receiver           →    Service classes
+ * Invoker            →    Queue system
+ *
+ * EXAMPLE:
+ *
+ * // Create job (command)
+ * php artisan make:job SendWelcomeEmail
+ *
+ * // Job class
+ * class SendWelcomeEmail implements ShouldQueue {
+ *     private User $user;
+ *
+ *     public function __construct(User $user) {
+ *         $this->user = $user;
+ *     }
+ *
+ *     public function handle(MailService $mailer) {
+ *         $mailer->send($this->user);
+ *     }
+ * }
+ *
+ * // Dispatch job (invoke command)
+ * SendWelcomeEmail::dispatch($user);
+ *
+ * // Delayed execution
+ * SendWelcomeEmail::dispatch($user)
+ *     ->delay(now()->addMinutes(10));
+ *
+ * // Chain commands
+ * SendWelcomeEmail::dispatch($user)
+ *     ->chain([
+ *         new CreateUserProfile($user),
+ *         new NotifyAdmin($user),
+ *     ]);
+ *
+ * BENEFITS IN LARAVEL:
+ * ✅ Automatic queueing
+ * ✅ Retry failed jobs
+ * ✅ Rate limiting
+ * ✅ Job chaining
+ * ✅ Job batching
+ */
+
+/**
+ * LARAVEL CONSOLE COMMANDS
+ * ────────────────────────────
+ *
+ * Artisan commands also follow Command Pattern!
+ *
+ * // Create command
+ * php artisan make:command SendEmails
+ *
+ * // Command class
+ * class SendEmails extends Command {
+ *     protected $signature = 'email:send {user}';
+ *
+ *     public function handle() {
+ *         // Command logic
+ *     }
+ * }
+ *
+ * // Execute command
+ * php artisan email:send 123
+ *
+ * COMPONENTS:
+ * - Command class = ConcreteCommand
+ * - handle() = execute()
+ * - Artisan = Invoker
+ * - Services = Receivers
+ */
+
+// ============================================
+// UNDO/REDO IMPLEMENTATION
+// ============================================
+
+/**
+ * HOW TO IMPLEMENT UNDO/REDO:
+ * ────────────────────────────
+ *
+ * STEP 1: Add undo() to Command interface
+ * interface Command {
+ *     public function execute(): void;
+ *     public function undo(): void;
+ * }
+ *
+ * STEP 2: Implement undo() in each command
+ * class LightOnCommand implements Command {
+ *     public function execute(): void {
+ *         $this->light->turnOn();
+ *     }
+ *
+ *     public function undo(): void {
+ *         $this->light->turnOff(); // Reverse action
+ *     }
+ * }
+ *
+ * STEP 3: Maintain command history in invoker
+ * class RemoteControl {
+ *     private array $history = [];
+ *
+ *     public function executeCommand(Command $cmd): void {
+ *         $cmd->execute();
+ *         $this->history[] = $cmd; // Store for undo
+ *     }
+ *
+ *     public function undo(): void {
+ *         if (empty($this->history)) return;
+ *
+ *         $cmd = array_pop($this->history);
+ *         $cmd->undo();
+ *     }
+ * }
+ *
+ * STEP 4: (Optional) Add redo support
+ * class RemoteControl {
+ *     private array $history = [];
+ *     private array $redoStack = [];
+ *
+ *     public function undo(): void {
+ *         if (empty($this->history)) return;
+ *
+ *         $cmd = array_pop($this->history);
+ *         $cmd->undo();
+ *         $this->redoStack[] = $cmd;
+ *     }
+ *
+ *     public function redo(): void {
+ *         if (empty($this->redoStack)) return;
+ *
+ *         $cmd = array_pop($this->redoStack);
+ *         $cmd->execute();
+ *         $this->history[] = $cmd;
+ *     }
+ * }
+ *
+ * ADVANCED: Store state for complex undo
+ * class SetTemperatureCommand implements Command {
+ *     private int $newTemp;
+ *     private int $oldTemp;
+ *
+ *     public function execute(): void {
+ *         $this->oldTemp = $this->thermostat->getTemp();
+ *         $this->thermostat->setTemp($this->newTemp);
+ *     }
+ *
+ *     public function undo(): void {
+ *         $this->thermostat->setTemp($this->oldTemp);
+ *     }
+ * }
+ */
+
+// ============================================
+// MACRO COMMANDS (COMPOSITE PATTERN)
+// ============================================
+
+/**
+ * WHAT ARE MACRO COMMANDS?
+ * ────────────────────────────
+ * Commands that execute multiple commands together
+ *
+ * USE CASES:
+ * - "Good Night Mode": Turn off lights, lock doors, set alarm
+ * - "Party Mode": Turn on lights, start music, adjust temperature
+ * - "Leave Home": Lock doors, turn off appliances, set security
+ * - "Wake Up": Open blinds, start coffee maker, turn on news
+ *
+ * IMPLEMENTATION:
+ *
+ * class MacroCommand implements Command {
+ *     private array $commands;
+ *
+ *     public function __construct(array $commands) {
+ *         $this->commands = $commands;
+ *     }
+ *
+ *     public function execute(): void {
+ *         foreach ($this->commands as $cmd) {
+ *             $cmd->execute();
+ *         }
+ *     }
+ *
+ *     public function undo(): void {
+ *         // Undo in reverse order
+ *         foreach (array_reverse($this->commands) as $cmd) {
+ *             $cmd->undo();
+ *         }
+ *     }
+ * }
+ *
+ * USAGE:
+ *
+ * $goodNight = new MacroCommand([
+ *     new LightOffCommand($livingRoomLight),
+ *     new LightOffCommand($bedroomLight),
+ *     new LockDoorCommand($frontDoor),
+ *     new LockDoorCommand($backDoor),
+ *     new SetAlarmCommand($alarm, true),
+ * ]);
+ *
+ * $remote->setCommand(5, $goodNight);
+ * $remote->pressButton(5); // Executes all commands!
+ *
+ * BENEFITS:
+ * ✅ Execute multiple operations with one action
+ * ✅ Reusable command combinations
+ * ✅ Can undo entire macro at once
+ * ✅ Easy to create shortcuts/scenes
+ */
+
+// ============================================
+// COMMAND QUEUING & SCHEDULING
+// ============================================
+
+/**
+ * QUEUING COMMANDS:
+ * ────────────────────────────
+ *
+ * class CommandQueue {
+ *     private array $queue = [];
+ *
+ *     public function add(Command $cmd): void {
+ *         $this->queue[] = $cmd;
+ *     }
+ *
+ *     public function process(): void {
+ *         while (!empty($this->queue)) {
+ *             $cmd = array_shift($this->queue);
+ *             $cmd->execute();
+ *         }
+ *     }
+ *
+ *     public function processAsync(): void {
+ *         foreach ($this->queue as $cmd) {
+ *             // Process in background
+ *             dispatch(fn() => $cmd->execute());
+ *         }
+ *     }
+ * }
+ *
+ * USE CASES:
+ * - Background job processing
+ * - Batch operations
+ * - Load balancing
+ * - Rate limiting
+ *
+ * SCHEDULING COMMANDS:
+ * ────────────────────────────
+ *
+ * class ScheduledCommand {
+ *     private Command $command;
+ *     private DateTime $executeAt;
+ *
+ *     public function __construct(Command $cmd, DateTime $when) {
+ *         $this->command = $cmd;
+ *         $this->executeAt = $when;
+ *     }
+ *
+ *     public function shouldExecute(): bool {
+ *         return new DateTime() >= $this->executeAt;
+ *     }
+ *
+ *     public function execute(): void {
+ *         if ($this->shouldExecute()) {
+ *             $this->command->execute();
+ *         }
+ *     }
+ * }
+ *
+ * USE CASES:
+ * - Scheduled tasks
+ * - Delayed execution
+ * - Cron jobs
+ * - Reminder systems
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Putting Business Logic in Command
+ * ────────────────────────────
+ * PROBLEM: Commands become bloated, hard to test
+ * SOLUTION: Commands should delegate to receivers
+ *
+ * ❌ BAD:
+ * class SendEmailCommand implements Command {
+ *     public function execute(): void {
+ *         // Complex email logic here
+ *         $smtp = new SMTPConnection();
+ *         $smtp->connect();
+ *         // 50 lines of code...
+ *     }
+ * }
+ *
+ * ✅ GOOD:
+ * class SendEmailCommand implements Command {
+ *     public function execute(): void {
+ *         $this->mailer->send($this->to, $this->subject);
+ *     }
+ * }
+ *
+ * MISTAKE 2: Not Using Interfaces
+ * ────────────────────────────
+ * PROBLEM: Tight coupling, can't swap commands
+ * SOLUTION: Always use Command interface
+ *
+ * MISTAKE 3: Invoker Knowing About Receivers
+ * ────────────────────────────
+ * PROBLEM: Defeats purpose of pattern
+ * SOLUTION: Invoker should only know Command interface
+ *
+ * MISTAKE 4: Commands Without Undo
+ * ────────────────────────────
+ * PROBLEM: Can't reverse operations when needed
+ * SOLUTION: Implement undo() even if simple
+ *
+ * MISTAKE 5: Not Storing Previous State
+ * ────────────────────────────
+ * PROBLEM: Can't undo properly
+ * SOLUTION: Store old state before changing
+ *
+ * MISTAKE 6: Forgetting to Clear Redo Stack
+ * ────────────────────────────
+ * PROBLEM: Redo after new command makes no sense
+ * SOLUTION: Clear redo stack when new command executed
+ *
+ * MISTAKE 7: Heavy Commands
+ * ────────────────────────────
+ * PROBLEM: Slow execution, blocks UI
+ * SOLUTION: Use queues for heavy operations
+ *
+ * MISTAKE 8: Not Handling Command Failures
+ * ────────────────────────────
+ * PROBLEM: Partial execution, inconsistent state
+ * SOLUTION: Use try-catch, implement rollback
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Commands Lightweight
+ * ────────────────────────────
+ * Commands should be thin wrappers, not contain business logic
+ *
+ * BEST PRACTICE 2: Use Meaningful Names
+ * ────────────────────────────
+ * Good: TurnOnLightCommand, SendEmailCommand
+ * Bad: Command1, DoSomethingCommand
+ *
+ * BEST PRACTICE 3: Single Responsibility
+ * ────────────────────────────
+ * Each command should do ONE thing only
+ *
+ * BEST PRACTICE 4: Immutable Commands
+ * ────────────────────────────
+ * Once created, command state shouldn't change
+ *
+ * BEST PRACTICE 5: Store Necessary Data
+ * ────────────────────────────
+ * Command should contain all data needed for execution
+ *
+ * BEST PRACTICE 6: Implement Undo When Possible
+ * ────────────────────────────
+ * Even if not used immediately, it's valuable later
+ *
+ * BEST PRACTICE 7: Use Queues for Async
+ * ────────────────────────────
+ * Don't block UI with slow commands
+ *
+ * BEST PRACTICE 8: Log Command Execution
+ * ────────────────────────────
+ * Helpful for debugging and audit trails
+ *
+ * BEST PRACTICE 9: Test Commands Independently
+ * ────────────────────────────
+ * Unit test each command separately
+ *
+ * BEST PRACTICE 10: Document Command Purpose
+ * ────────────────────────────
+ * Add clear comments about what command does
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * COMMAND vs STRATEGY
+ * ────────────────────────────
+ * Command: Encapsulates request as object, supports undo/queue
+ * Strategy: Encapsulates algorithm, interchangeable behaviors
+ *
+ * Command focuses on: WHAT to do
+ * Strategy focuses on: HOW to do it
+ *
+ * COMMAND vs OBSERVER
+ * ────────────────────────────
+ * Command: One-to-one, invoker executes one command
+ * Observer: One-to-many, subject notifies all observers
+ *
+ * Command: Pull model (invoker pulls execution)
+ * Observer: Push model (subject pushes notification)
+ *
+ * COMMAND vs MEMENTO
+ * ────────────────────────────
+ * Command: Stores action to execute/undo
+ * Memento: Stores object state for restoration
+ *
+ * Often used together for undo functionality
+ *
+ * COMMAND vs CHAIN OF RESPONSIBILITY
+ * ────────────────────────────
+ * Command: Request handled by specific command
+ * Chain: Request passed through chain until handled
+ *
+ * Command: Known receiver
+ * Chain: Receiver determined at runtime
+ *
+ * COMMAND vs MEDIATOR
+ * ────────────────────────────
+ * Command: Decouples sender from receiver
+ * Mediator: Decouples colleagues from each other
+ *
+ * Can be used together: Mediator uses Commands
+ */
+
+// ============================================
+// TESTING COMMAND PATTERN
+// ============================================
+
+/**
+ * HOW TO TEST COMMANDS:
+ * ────────────────────────────
+ *
+ * TEST 1: Test Command Execution
+ *
+ * public function test_light_on_command_turns_light_on()
+ * {
+ *     $light = new Light('Living Room');
+ *     $command = new LightOnCommand($light);
+ *
+ *     $command->execute();
+ *
+ *     $this->assertTrue($light->isOn());
+ * }
+ *
+ * TEST 2: Test Command Undo
+ *
+ * public function test_light_on_command_can_be_undone()
+ * {
+ *     $light = new Light('Living Room');
+ *     $command = new LightOnCommand($light);
+ *
+ *     $command->execute();
+ *     $command->undo();
+ *
+ *     $this->assertFalse($light->isOn());
+ * }
+ *
+ * TEST 3: Test Invoker
+ *
+ * public function test_remote_executes_command()
+ * {
+ *     $light = new Light('Living Room');
+ *     $command = new LightOnCommand($light);
+ *     $remote = new RemoteControl();
+ *
+ *     $remote->setCommand(1, $command);
+ *     $remote->pressButton(1);
+ *
+ *     $this->assertTrue($light->isOn());
+ * }
+ *
+ * TEST 4: Test Undo Functionality
+ *
+ * public function test_remote_undo_works()
+ * {
+ *     $light = new Light('Living Room');
+ *     $command = new LightOnCommand($light);
+ *     $remote = new RemoteControl();
+ *
+ *     $remote->setCommand(1, $command);
+ *     $remote->pressButton(1);
+ *     $remote->pressUndo();
+ *
+ *     $this->assertFalse($light->isOn());
+ * }
+ *
+ * TEST 5: Test Macro Command
+ *
+ * public function test_macro_command_executes_all()
+ * {
+ *     $light = new Light('Living Room');
+ *     $door = new Door('Front');
+ *
+ *     $macro = new MacroCommand([
+ *         new LightOffCommand($light),
+ *         new LockDoorCommand($door),
+ *     ]);
+ *
+ *     $macro->execute();
+ *
+ *     $this->assertFalse($light->isOn());
+ *     $this->assertTrue($door->isLocked());
+ * }
+ *
+ * TEST 6: Test Command with Mock
+ *
+ * public function test_command_calls_receiver_method()
+ * {
+ *     $light = $this->createMock(Light::class);
+ *     $light->expects($this->once())
+ *           ->method('turnOn');
+ *
+ *     $command = new LightOnCommand($light);
+ *     $command->execute();
+ * }
+ */
+
+// ============================================
+// ADVANCED PATTERNS & TECHNIQUES
+// ============================================
+
+/**
+ * TECHNIQUE 1: COMMAND WITH RESULT
+ * ────────────────────────────
+ * Commands that return values
+ *
+ * interface QueryCommand {
+ *     public function execute(): mixed;
+ * }
+ *
+ * class GetUserCommand implements QueryCommand {
+ *     private int $userId;
+ *
+ *     public function execute(): ?User {
+ *         return User::find($this->userId);
+ *     }
+ * }
+ *
+ * TECHNIQUE 2: TRANSACTIONAL COMMANDS
+ * ────────────────────────────
+ * Commands that support transactions
+ *
+ * class TransactionalCommand implements Command {
+ *     public function execute(): void {
+ *         DB::beginTransaction();
+ *         try {
+ *             $this->doExecute();
+ *             DB::commit();
+ *         } catch (Exception $e) {
+ *             DB::rollback();
+ *             throw $e;
+ *         }
+ *     }
+ *
+ *     abstract protected function doExecute(): void;
+ * }
+ *
+ * TECHNIQUE 3: COMMAND WITH VALIDATION
+ * ────────────────────────────
+ * Validate before execution
+ *
+ * class ValidatedCommand implements Command {
+ *     public function execute(): void {
+ *         if (!$this->validate()) {
+ *             throw new ValidationException();
+ *         }
+ *         $this->doExecute();
+ *     }
+ *
+ *     abstract protected function validate(): bool;
+ *     abstract protected function doExecute(): void;
+ * }
+ *
+ * TECHNIQUE 4: COMMAND WITH PROGRESS
+ * ────────────────────────────
+ * Report progress during execution
+ *
+ * interface ProgressCommand extends Command {
+ *     public function onProgress(callable $callback): void;
+ * }
+ *
+ * class ImportDataCommand implements ProgressCommand {
+ *     private $progressCallback;
+ *
+ *     public function execute(): void {
+ *         foreach ($this->data as $i => $item) {
+ *             $this->process($item);
+ *             if ($this->progressCallback) {
+ *                 ($this->progressCallback)($i, count($this->data));
+ *             }
+ *         }
+ *     }
+ * }
+ *
+ * TECHNIQUE 5: COMMAND CHAIN
+ * ────────────────────────────
+ * Execute commands in sequence
+ *
+ * class CommandChain {
+ *     private array $commands = [];
+ *
+ *     public function add(Command $cmd): self {
+ *         $this->commands[] = $cmd;
+ *         return $this;
+ *     }
+ *
+ *     public function execute(): void {
+ *         foreach ($this->commands as $cmd) {
+ *             $cmd->execute();
+ *         }
+ *     }
+ * }
+ *
+ * Usage:
+ * (new CommandChain())
+ *     ->add(new ValidateUserCommand())
+ *     ->add(new CreateUserCommand())
+ *     ->add(new SendWelcomeEmailCommand())
+ *     ->execute();
+ *
+ * TECHNIQUE 6: CONDITIONAL COMMANDS
+ * ────────────────────────────
+ * Execute based on condition
+ *
+ * class ConditionalCommand implements Command {
+ *     private Command $command;
+ *     private $condition;
+ *
+ *     public function __construct(Command $cmd, callable $condition) {
+ *         $this->command = $cmd;
+ *         $this->condition = $condition;
+ *     }
+ *
+ *     public function execute(): void {
+ *         if (($this->condition)()) {
+ *             $this->command->execute();
+ *         }
+ *     }
+ * }
+ *
+ * Usage:
+ * $cmd = new ConditionalCommand(
+ *     new SendEmailCommand(),
+ *     fn() => $user->wantsEmails()
+ * );
+ *
+ * TECHNIQUE 7: RETRY COMMAND
+ * ────────────────────────────
+ * Retry on failure
+ *
+ * class RetryCommand implements Command {
+ *     private Command $command;
+ *     private int $maxAttempts;
+ *
+ *     public function execute(): void {
+ *         $attempt = 0;
+ *         while ($attempt < $this->maxAttempts) {
+ *             try {
+ *                 $this->command->execute();
+ *                 return;
+ *             } catch (Exception $e) {
+ *                 $attempt++;
+ *                 if ($attempt >= $this->maxAttempts) {
+ *                     throw $e;
+ *                 }
+ *                 sleep(1);
+ *             }
+ *         }
+ *     }
+ * }
+ */
+
+// ============================================
+// PERFORMANCE CONSIDERATIONS
+// ============================================
+
+/**
+ * OPTIMIZATION 1: LAZY COMMAND CREATION
+ * ────────────────────────────
+ * Don't create commands until needed
+ *
+ * class LazyRemoteControl {
+ *     private array $commandFactories = [];
+ *
+ *     public function setCommand(int $slot, callable $factory): void {
+ *         $this->commandFactories[$slot] = $factory;
+ *     }
+ *
+ *     public function pressButton(int $slot): void {
+ *         if (isset($this->commandFactories[$slot])) {
+ *             $command = ($this->commandFactories[$slot])();
+ *             $command->execute();
+ *         }
+ *     }
+ * }
+ *
+ * OPTIMIZATION 2: COMMAND POOLING
+ * ────────────────────────────
+ * Reuse command objects
+ *
+ * class CommandPool {
+ *     private array $pool = [];
+ *
+ *     public function get(string $type): Command {
+ *         if (!isset($this->pool[$type])) {
+ *             $this->pool[$type] = new $type();
+ *         }
+ *         return $this->pool[$type];
+ *     }
+ * }
+ *
+ * OPTIMIZATION 3: BATCH COMMANDS
+ * ────────────────────────────
+ * Group similar commands together
+ *
+ * class BatchCommand implements Command {
+ *     private array $items;
+ *
+ *     public function execute(): void {
+ *         // Process all items in one batch
+ *         DB::table('users')->insert($this->items);
+ *     }
+ * }
+ *
+ * OPTIMIZATION 4: ASYNC COMMANDS
+ * ────────────────────────────
+ * Execute commands asynchronously
+ *
+ * class AsyncCommand implements Command {
+ *     public function execute(): void {
+ *         dispatch(function() {
+ *             $this->command->execute();
+ *         });
+ *     }
+ * }
+ *
+ * MEMORY CONSIDERATIONS:
+ * ────────────────────────────
+ * - Limit history size (keep last N commands)
+ * - Clear old commands periodically
+ * - Use weak references for large objects
+ * - Serialize/deserialize for persistence
+ */
