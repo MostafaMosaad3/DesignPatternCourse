@@ -1,0 +1,801 @@
+<?php
+
+// ============================================
+// ADAPTER DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS ADAPTER PATTERN?
+ *
+ * The Adapter Pattern converts the interface of a class into another interface
+ * that clients expect. Adapter lets classes work together that couldn't otherwise
+ * because of incompatible interfaces.
+ *
+ * SIMPLE EXPLANATION:
+ * It's like a translator between two people who speak different languages.
+ * The adapter translates one interface to match what the client expects.
+ *
+ * REAL-WORLD ANALOGY 1: POWER ADAPTER
+ * When traveling from USA to Europe:
+ * - USA plug (2 flat pins) → Doesn't fit European socket (2 round pins)
+ * - Power Adapter → Converts USA plug to European socket
+ * - Now your device works!
+ *
+ * The adapter doesn't change the device or the socket, it just translates between them.
+ *
+ * REAL-WORLD ANALOGY 2: MEMORY CARD ADAPTER
+ * Reading micro SD card on computer:
+ * - Micro SD card → Too small for computer slot
+ * - SD Card Adapter → Makes micro SD fit into SD slot
+ * - Computer can now read the card
+ *
+ * The adapter makes incompatible things compatible.
+ *
+ * REAL-WORLD ANALOGY 3: TRANSLATOR
+ * Business meeting between English and Japanese speakers:
+ * - English speaker → Speaks English
+ * - Japanese speaker → Speaks Japanese
+ * - Translator (Adapter) → Translates between them
+ * - Communication possible!
+ *
+ * REAL-WORLD ANALOGY 4: USB-C TO HDMI ADAPTER
+ * Connecting laptop to monitor:
+ * - Laptop has USB-C port
+ * - Monitor has HDMI port
+ * - USB-C to HDMI Adapter → Connects them
+ * - Display works!
+ *
+ * MORE ANALOGIES:
+ * - Audio adapter: 3.5mm jack to USB-C
+ * - Video game controller adapter: PlayStation to Xbox
+ * - Currency exchange: USD to EUR
+ * - Unit converter: Miles to Kilometers
+ *
+ * COMPONENTS:
+ * 1. Target Interface: The interface client expects
+ * 2. Adaptee: The existing class with incompatible interface
+ * 3. Adapter: Converts adaptee's interface to target interface
+ * 4. Client: Uses target interface
+ *
+ * WHEN TO USE:
+ * - Want to use existing class but interface doesn't match
+ * - Need to integrate third-party library with different interface
+ * - Legacy code integration with new system
+ * - Multiple classes with similar functionality but different interfaces
+ * - Want to create reusable class that cooperates with unrelated classes
+ *
+ * WHEN NOT TO USE:
+ * - Interfaces are already compatible
+ * - Can modify the original class (just change it directly)
+ * - Simple wrapper is enough
+ * - Too many adapters make system complex
+ *
+ * BENEFITS:
+ * ✅ Single Responsibility: Separates interface conversion from business logic
+ * ✅ Open/Closed Principle: Add new adapters without modifying existing code
+ * ✅ Reusability: Can reuse existing classes with incompatible interfaces
+ * ✅ Flexibility: Easy to swap implementations
+ * ✅ Integration: Connect incompatible systems
+ * ✅ Testing: Easy to mock adapters
+ *
+ * DRAWBACKS:
+ * ❌ Increased complexity: More classes
+ * ❌ Performance: Extra layer of indirection
+ * ❌ Can be overused: Too many adapters confuse codebase
+ */
+
+// ============================================
+// STRUCTURE OF ADAPTER PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────┐
+ * │     Client      │
+ * └────────┬────────┘
+ *          │ uses
+ *          ↓
+ * ┌─────────────────┐
+ * │Target Interface │
+ * ├─────────────────┤
+ * │ + request()     │
+ * └────────┬────────┘
+ *          △
+ *          │ implements
+ *          │
+ * ┌────────┴────────┐
+ * │    Adapter      │
+ * ├─────────────────┤
+ * │ - adaptee       │
+ * ├─────────────────┤
+ * │ + request()     │
+ * └────────┬────────┘
+ *          │ has
+ *          ↓
+ * ┌─────────────────┐
+ * │    Adaptee      │
+ * ├─────────────────┤
+ * │ + specificReq() │
+ * └─────────────────┘
+ *
+ * Flow:
+ * Client → Target Interface → Adapter → Adaptee
+ *
+ * Client calls: request()
+ * Adapter translates: request() → specificRequest()
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW ADAPTER PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE:
+ * ────────────────────────────
+ * 1. Define Target Interface
+ *    → The interface client expects
+ *    → Example: WeatherServiceInterface with getWeatherData(city, country)
+ *
+ * 2. Identify Adaptee
+ *    → The existing class with incompatible interface
+ *    → Example: NewWeatherService with fetchWeatherByCoordinates(lon, lat)
+ *
+ * 3. Create Adapter
+ *    → Implements Target Interface
+ *    → Contains Adaptee instance
+ *    → Translates calls between interfaces
+ *
+ * EXECUTION PHASE:
+ * ────────────────────────────
+ * 4. Client calls Target Interface
+ *    → client->getWeatherData('Cairo', 'Egypt')
+ *
+ * 5. Adapter receives call
+ *    → adapter->getWeatherData('Cairo', 'Egypt')
+ *
+ * 6. Adapter translates parameters
+ *    → Converts city/country to longitude/latitude
+ *    → 'Cairo, Egypt' → (31.2357, 30.0444)
+ *
+ * 7. Adapter calls Adaptee
+ *    → adaptee->fetchWeatherByCoordinates(31.2357, 30.0444)
+ *
+ * 8. Adaptee returns result
+ *    → Returns: {temp: 25, conditions: 'Sunny', longitude: 31.2357, latitude: 30.0444}
+ *
+ * 9. Adapter transforms result
+ *    → Transforms to expected format
+ *    → Returns: {temperature: 25, condition: 'Sunny', city: 'Cairo', country: 'Egypt'}
+ *
+ * 10. Client receives expected format
+ *     → Client happy! Doesn't know about adapter!
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: TARGET INTERFACE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The interface that the client expects and uses
+ *
+ * WHAT DOES IT DO?
+ * - Defines methods client wants to call
+ * - Establishes contract for adapter
+ * - Represents desired interface
+ *
+ * EXAMPLE:
+ * interface WeatherServiceInterface {
+ *     public function getWeatherData(string $city, string $country): array;
+ * }
+ *
+ * WHY IMPORTANT?
+ * - Client depends on this, not concrete implementation
+ * - Adapter must implement this
+ * - Allows swapping implementations
+ */
+
+/**
+ * KEY CONCEPT 2: ADAPTEE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The existing class with incompatible interface that needs to be adapted
+ *
+ * CHARACTERISTICS:
+ * - Already exists (can't or don't want to modify)
+ * - Has different method names
+ * - Has different parameters
+ * - Has different return types
+ * - Works perfectly, just incompatible interface
+ *
+ * EXAMPLE:
+ * class NewWeatherService {
+ *     public function fetchWeatherByCoordinates(float $lon, float $lat): array {
+ *         // Different interface!
+ *     }
+ * }
+ *
+ * WHY NOT CHANGE IT?
+ * - Third-party library (can't modify)
+ * - Legacy system (risky to change)
+ * - Used by other systems (breaking change)
+ * - Need to integrate without modification
+ */
+
+/**
+ * KEY CONCEPT 3: THE ADAPTER
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The bridge between Target Interface and Adaptee
+ *
+ * WHAT DOES IT DO?
+ * - Implements Target Interface
+ * - Contains Adaptee instance
+ * - Translates method calls
+ * - Converts parameters
+ * - Transforms return values
+ *
+ * RESPONSIBILITIES:
+ * 1. Interface Translation: Match method signatures
+ * 2. Parameter Conversion: Transform input data
+ * 3. Result Transformation: Format output data
+ * 4. Error Handling: Handle incompatibilities
+ *
+ * THINK OF IT AS:
+ * A translator that speaks both languages
+ */
+
+/**
+ * KEY CONCEPT 4: OBJECT ADAPTER VS CLASS ADAPTER
+ * ──────────────────────────────
+ *
+ * OBJECT ADAPTER (Composition - Recommended):
+ * - Adapter HAS-A Adaptee (composition)
+ * - More flexible
+ * - Can adapt multiple adaptees
+ * - Can add behavior easily
+ *
+ * Example:
+ * class Adapter implements Target {
+ *     private Adaptee $adaptee; // Composition
+ *
+ *     public function __construct(Adaptee $adaptee) {
+ *         $this->adaptee = $adaptee;
+ *     }
+ * }
+ *
+ * CLASS ADAPTER (Inheritance):
+ * - Adapter IS-A Adaptee (inheritance)
+ * - Less flexible
+ * - Can only adapt one class
+ * - PHP doesn't support multiple inheritance
+ *
+ * Example:
+ * class Adapter extends Adaptee implements Target {
+ *     // Inherits from Adaptee
+ * }
+ *
+ * RECOMMENDATION: Use Object Adapter (composition)
+ */
+
+/**
+ * KEY CONCEPT 5: TWO-WAY ADAPTER
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Adapter that works in both directions
+ *
+ * WHEN NEEDED?
+ * - Need to use both old and new interface
+ * - Gradual migration from old to new system
+ * - Interoperability required
+ *
+ * Example:
+ * class TwoWayAdapter implements OldInterface, NewInterface {
+ *     public function oldMethod() {
+ *         return $this->newMethod();
+ *     }
+ *
+ *     public function newMethod() {
+ *         // Implementation
+ *     }
+ * }
+ */
+
+/**
+ * KEY CONCEPT 6: ADAPTER CHAIN
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Multiple adapters in sequence
+ *
+ * WHEN NEEDED?
+ * - Complex transformations
+ * - Multiple incompatible layers
+ * - Step-by-step conversion
+ *
+ * Example:
+ * Client → Adapter1 → Adapter2 → Adapter3 → Adaptee
+ *
+ * Each adapter handles one transformation
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: WEATHER API INTEGRATION
+ * ────────────────────────────
+ * Problem: App uses city/country, new API uses coordinates
+ * Solution: Adapter converts city/country to coordinates
+ * Benefit: App code unchanged
+ *
+ * EXAMPLE 2: DATABASE MIGRATION
+ * ────────────────────────────
+ * Problem: App uses MySQL interface, migrating to PostgreSQL
+ * Solution: Adapter translates MySQL calls to PostgreSQL
+ * Benefit: Gradual migration possible
+ *
+ * EXAMPLE 3: PAYMENT GATEWAY SWITCH
+ * ────────────────────────────
+ * Problem: App uses Stripe API, want to support PayPal too
+ * Solution: Adapter for each gateway implementing common interface
+ * Benefit: Easy to switch payment providers
+ *
+ * EXAMPLE 4: LEGACY SYSTEM INTEGRATION
+ * ────────────────────────────
+ * Problem: New system needs data from old SOAP API
+ * Solution: Adapter converts SOAP to REST format
+ * Benefit: Modern code, legacy integration
+ *
+ * EXAMPLE 5: THIRD-PARTY LIBRARY
+ * ────────────────────────────
+ * Problem: Library uses different interface than app expects
+ * Solution: Adapter wraps library with expected interface
+ * Benefit: Can swap libraries easily
+ *
+ * EXAMPLE 6: FILE FORMAT CONVERSION
+ * ────────────────────────────
+ * Problem: App expects JSON, service returns XML
+ * Solution: Adapter converts XML to JSON
+ * Benefit: Format transparency
+ *
+ * EXAMPLE 7: AUTHENTICATION PROVIDERS
+ * ────────────────────────────
+ * Problem: Different OAuth providers (Google, Facebook, GitHub)
+ * Solution: Adapter for each provider implementing common auth interface
+ * Benefit: Uniform authentication code
+ *
+ * EXAMPLE 8: LOGGING LIBRARIES
+ * ────────────────────────────
+ * Problem: App uses custom logger, want to use Monolog
+ * Solution: Adapter implements app's logger interface, uses Monolog internally
+ * Benefit: Switch logger without changing app code
+ */
+
+// ============================================
+// ADAPTER PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL EXAMPLES OF ADAPTER PATTERN
+ * ────────────────────────────
+ *
+ * EXAMPLE 1: Cache Drivers
+ * Laravel's cache system uses Adapter Pattern:
+ *
+ * Cache::driver('redis')->put('key', 'value');
+ * Cache::driver('file')->put('key', 'value');
+ * Cache::driver('database')->put('key', 'value');
+ *
+ * Each driver adapts different storage to common interface
+ *
+ * EXAMPLE 2: Filesystem Drivers
+ * Different storage systems adapted to common interface:
+ *
+ * Storage::disk('local')->put('file.txt', 'content');
+ * Storage::disk('s3')->put('file.txt', 'content');
+ * Storage::disk('ftp')->put('file.txt', 'content');
+ *
+ * Same method calls, different implementations
+ *
+ * EXAMPLE 3: Queue Drivers
+ * Different queue systems adapted:
+ *
+ * Queue::push(new SendEmail());
+ *
+ * Works with: database, redis, sqs, sync, etc.
+ *
+ * EXAMPLE 4: Mail Drivers
+ * Different email providers adapted:
+ *
+ * Mail::to($user)->send(new WelcomeEmail());
+ *
+ * Works with: SMTP, Mailgun, SES, Postmark, etc.
+ *
+ * EXAMPLE 5: Broadcasting Drivers
+ * Different broadcast systems adapted:
+ *
+ * broadcast(new OrderShipped($order));
+ *
+ * Works with: Pusher, Redis, Ably, etc.
+ *
+ * SERVICE PROVIDER PATTERN:
+ * Laravel's service providers act as adapters:
+ *
+ * class WeatherServiceProvider extends ServiceProvider {
+ *     public function register() {
+ *         $this->app->bind(
+ *             WeatherServiceInterface::class,
+ *             WeatherServiceAdapter::class
+ *         );
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Adapter Doing Too Much
+ * ────────────────────────────
+ * PROBLEM: Adapter contains business logic
+ * SOLUTION: Adapter should only translate, not implement logic
+ *
+ * BAD:
+ * class Adapter {
+ *     public function request() {
+ *         // Translation
+ *         // Business logic HERE (wrong!)
+ *         // More translation
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Adapter {
+ *     public function request() {
+ *         // Only translation
+ *         return $this->adaptee->specificRequest();
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 2: Not Using Interfaces
+ * ────────────────────────────
+ * PROBLEM: Client depends on concrete adapter
+ * SOLUTION: Always use target interface
+ *
+ * BAD:
+ * class Client {
+ *     private WeatherAdapter $adapter; // Concrete class!
+ * }
+ *
+ * GOOD:
+ * class Client {
+ *     private WeatherServiceInterface $service; // Interface!
+ * }
+ */
+
+/**
+ * MISTAKE 3: Modifying Adaptee
+ * ────────────────────────────
+ * PROBLEM: Changing adaptee defeats purpose of adapter
+ * SOLUTION: Never modify adaptee, that's why we use adapter
+ *
+ * If you can modify adaptee, just change its interface directly!
+ */
+
+/**
+ * MISTAKE 4: Creating Adapter for Everything
+ * ────────────────────────────
+ * PROBLEM: Too many adapters, overengineering
+ * SOLUTION: Use adapter only when truly needed
+ *
+ * Don't create adapter if:
+ * - Interfaces already compatible
+ * - Simple wrapper would work
+ * - Can easily modify original class
+ */
+
+/**
+ * MISTAKE 5: Tight Coupling to Specific Adaptee
+ * ────────────────────────────
+ * PROBLEM: Adapter knows too much about adaptee internals
+ * SOLUTION: Adapter should only use adaptee's public interface
+ *
+ * BAD:
+ * class Adapter {
+ *     public function request() {
+ *         $this->adaptee->internalPrivateMethod(); // Using internals!
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Adapter {
+ *     public function request() {
+ *         $this->adaptee->publicMethod(); // Only public interface
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 6: Not Handling Exceptions
+ * ────────────────────────────
+ * PROBLEM: Adaptee throws different exceptions than expected
+ * SOLUTION: Catch and translate exceptions too
+ *
+ * GOOD:
+ * class Adapter {
+ *     public function request() {
+ *         try {
+ *             return $this->adaptee->specificRequest();
+ *         } catch (AdapteeException $e) {
+ *             throw new TargetException($e->getMessage());
+ *         }
+ *     }
+ * }
+ */
+
+/**
+ * MISTAKE 7: Incomplete Adaptation
+ * ────────────────────────────
+ * PROBLEM: Only adapting some methods, not all
+ * SOLUTION: Implement entire target interface
+ *
+ * If target interface has 5 methods, adapter must implement all 5
+ */
+
+/**
+ * MISTAKE 8: Losing Data in Translation
+ * ────────────────────────────
+ * PROBLEM: Adapter loses information during conversion
+ * SOLUTION: Preserve all necessary data
+ *
+ * Example: Converting coordinates to city name loses precision
+ * Make sure no critical data is lost
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Adapter Simple
+ * ────────────────────────────
+ * Adapter should only translate interfaces
+ * No business logic in adapter
+ *
+ * BEST PRACTICE 2: Use Composition Over Inheritance
+ * ────────────────────────────
+ * Prefer object adapter (composition) over class adapter (inheritance)
+ * More flexible and follows composition over inheritance principle
+ *
+ * BEST PRACTICE 3: Implement Complete Interface
+ * ────────────────────────────
+ * Implement all methods of target interface
+ * Even if some methods throw "not supported" exceptions
+ *
+ * BEST PRACTICE 4: Document Adapter Purpose
+ * ────────────────────────────
+ * Explain what it adapts and why
+ * Document any limitations or data loss
+ *
+ * BEST PRACTICE 5: Test Adapter Thoroughly
+ * ────────────────────────────
+ * Test all method translations
+ * Test parameter conversions
+ * Test return value transformations
+ * Test exception handling
+ *
+ * BEST PRACTICE 6: Use Meaningful Names
+ * ────────────────────────────
+ * Good: WeatherServiceAdapter, DatabaseAdapter
+ * Bad: Adapter1, MyAdapter, A
+ *
+ * BEST PRACTICE 7: Consider Performance
+ * ────────────────────────────
+ * Adapter adds layer of indirection
+ * Cache translations if expensive
+ * Avoid unnecessary conversions
+ *
+ * BEST PRACTICE 8: Handle Null and Edge Cases
+ * ────────────────────────────
+ * What if adaptee returns null?
+ * What if parameters are invalid?
+ * Handle gracefully
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * ADAPTER vs DECORATOR
+ * ────────────────────────────
+ * ADAPTER:
+ * - Changes interface
+ * - Makes incompatible things compatible
+ * - Different interface after adaptation
+ *
+ * DECORATOR:
+ * - Adds functionality
+ * - Same interface before and after
+ * - Enhances behavior
+ *
+ * ADAPTER vs FACADE
+ * ────────────────────────────
+ * ADAPTER:
+ * - Converts one interface to another
+ * - One-to-one relationship
+ * - Makes incompatible interfaces compatible
+ *
+ * FACADE:
+ * - Simplifies complex subsystem
+ * - Provides simpler interface to many classes
+ * - Hides complexity
+ *
+ * ADAPTER vs BRIDGE
+ * ────────────────────────────
+ * ADAPTER:
+ * - Created after classes are designed
+ * - Makes existing classes work together
+ * - Reactive solution
+ *
+ * BRIDGE:
+ * - Designed upfront
+ * - Separates abstraction from implementation
+ * - Proactive design
+ *
+ * ADAPTER vs PROXY
+ * ────────────────────────────
+ * ADAPTER:
+ * - Changes interface
+ * - Focuses on compatibility
+ *
+ * PROXY:
+ * - Same interface
+ * - Controls access or adds functionality
+ * - Focuses on control
+ *
+ * ADAPTER vs WRAPPER
+ * ────────────────────────────
+ * Adapter IS a type of wrapper
+ * Wrapper is general term
+ * Adapter specifically converts interfaces
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR ADAPTER PATTERN:
+ * ────────────────────────────
+ *
+ * □ Identify Target Interface (what client expects)
+ * □ Identify Adaptee (what needs to be adapted)
+ * □ Create Adapter class
+ * □ Adapter implements Target Interface
+ * □ Adapter contains Adaptee instance (composition)
+ * □ Implement each Target Interface method
+ * □ Each method translates to Adaptee call
+ * □ Convert parameters if needed
+ * □ Transform return values if needed
+ * □ Handle exceptions appropriately
+ * □ Test all method translations
+ * □ Test edge cases and null values
+ * □ Document adapter purpose and limitations
+ *
+ * LARAVEL INTEGRATION CHECKLIST:
+ * ────────────────────────────
+ *
+ * □ Create adapter class
+ * □ Implement target interface
+ * □ Bind in Service Provider
+ * □ Use dependency injection in controllers
+ * □ Test adapter with different implementations
+ * □ Document which adaptee is being used
+ */
+
+// ============================================
+// FOLDER STRUCTURE
+// ============================================
+
+/**
+ * RECOMMENDED STRUCTURE:
+ *
+ * app/
+ * └── Adapters/
+ *     ├── Contracts/
+ *     │   └── WeatherServiceInterface.php (target interface)
+ *     │
+ *     ├── Weather/
+ *     │   ├── WeatherServiceAdapter.php (adapter)
+ *     │   ├── NewWeatherService.php (adaptee)
+ *     │   └── GeocodingService.php (helper)
+ *     │
+ *     ├── Payment/
+ *     │   ├── PaymentGatewayInterface.php
+ *     │   ├── StripeAdapter.php
+ *     │   ├── PayPalAdapter.php
+ *     │   └── BankTransferAdapter.php
+ *     │
+ *     └── Database/
+ *         ├── DatabaseInterface.php
+ *         ├── MySQLAdapter.php
+ *         └── PostgreSQLAdapter.php
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * ADAPTER PATTERN IN ONE PAGE:
+ * ────────────────────────────
+ *
+ * WHAT: Converts interface of one class to another interface clients expect
+ *
+ * WHY: Make incompatible interfaces work together
+ *
+ * WHEN: Need to use existing class but interface doesn't match
+ *
+ * HOW:
+ * 1. Create target interface (what client expects)
+ * 2. Identify adaptee (what needs adaptation)
+ * 3. Create adapter implementing target interface
+ * 4. Adapter contains adaptee and translates calls
+ *
+ * COMPONENTS:
+ * - Target Interface: Expected interface
+ * - Adaptee: Existing incompatible class
+ * - Adapter: Translates between them
+ * - Client: Uses target interface
+ *
+ * BENEFITS:
+ * ✅ Makes incompatible interfaces work
+ * ✅ Single Responsibility
+ * ✅ Open/Closed Principle
+ * ✅ Easy to integrate third-party code
+ *
+ * REAL EXAMPLE:
+ * Power adapter, USB-C to HDMI, translator
+ *
+ * IN CODE:
+ * - App expects: getWeatherData(city, country)
+ * - Service provides: fetchByCoordinates(lon, lat)
+ * - Adapter translates between them
+ *
+ * IN LARAVEL:
+ * - Cache drivers (Redis, File, Database)
+ * - Storage drivers (Local, S3, FTP)
+ * - Queue drivers (Database, Redis, SQS)
+ *
+ * REMEMBER:
+ * - Adapter only translates, no business logic
+ * - Use composition (object adapter)
+ * - Implement complete target interface
+ * - Don't modify adaptee
+ *
+ * USE WHEN:
+ * ✅ Incompatible interfaces
+ * ✅ Third-party integration
+ * ✅ Legacy system integration
+ * ✅ Want to swap implementations
+ *
+ * DON'T USE WHEN:
+ * ❌ Interfaces already compatible
+ * ❌ Can modify original class
+ * ❌ Simple wrapper is enough
+ */
