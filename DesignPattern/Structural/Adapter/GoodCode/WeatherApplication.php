@@ -1,6 +1,8 @@
 <?php
 
-namespace DesignPattern\Adapter\GoodCode;
+namespace Adapter\GoodCode;
+
+use Adapter\GoodCode\Contracts\WeatherService;
 
 class WeatherApplication
 {

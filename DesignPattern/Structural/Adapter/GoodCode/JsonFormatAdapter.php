@@ -1,10 +1,11 @@
 <?php
 
-namespace DesignPattern\Adapter\GoodCode;
+namespace Adapter\GoodCode;
 
 // ============================================
 // STEP 5: FORMAT ADAPTER (FOR JSON)
 // ============================================
+use Adapter\GoodCode\Contracts\WeatherService;
 
 /**
  * Another adapter for format conversion

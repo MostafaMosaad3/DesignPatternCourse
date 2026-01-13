@@ -1,6 +1,6 @@
 <?php
 
-namespace DesignPattern\Adapter\GoodCode;
+namespace Adapter\GoodCode;
 
 class GeoCodingService
 {

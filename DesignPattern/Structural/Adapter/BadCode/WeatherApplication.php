@@ -1,6 +1,6 @@
 <?php
 
-namespace DesignPattern\Adapter\BadCode;
+namespace Adapter\BadCode;
 
 
 
