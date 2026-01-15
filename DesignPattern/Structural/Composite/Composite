@@ -1,0 +1,595 @@
+// ============================================
+// COMPOSITE DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS COMPOSITE PATTERN?
+ *
+ * The Composite Pattern lets you compose objects into tree structures
+ * to represent part-whole hierarchies. It lets clients treat individual
+ * objects and compositions uniformly.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a company organization:
+ * - CEO (individual)
+ * - Department (contains employees and sub-departments)
+ * - Employee (individual)
+ * - Both individuals and departments have salary
+ * - You can calculate total salary the same way for both
+ *
+ * ANOTHER ANALOGY:
+ * File system:
+ * - File (individual, leaf)
+ * - Folder (contains files and subfolders, composite)
+ * - Both have size
+ * - folder.getSize() = sum of all contents
+ * - file.getSize() = file's own size
+ * - Same method works for both!
+ *
+ * MORE ANALOGIES:
+ * - Menu system: MenuItem (leaf), SubMenu (composite)
+ * - Graphics: Shape (leaf), Group of shapes (composite)
+ * - Military hierarchy: Soldier (leaf), Unit (composite)
+ * - Task management: Task (leaf), Project (composite)
+ *
+ * COMPONENTS:
+ * 1. Component: Common interface for leaf and composite
+ * 2. Leaf: Individual object (no children)
+ * 3. Composite: Container object (has children)
+ * 4. Client: Works with Component interface
+ *
+ * WHEN TO USE:
+ * - Represent part-whole hierarchies
+ * - Want clients to ignore difference between objects and compositions
+ * - Tree structure
+ * - Need to treat individual and group uniformly
+ * - Recursive composition
+ *
+ * WHEN NOT TO USE:
+ * - Flat structure (no hierarchy)
+ * - Leaf and composite are very different
+ * - Need to restrict child types strictly
+ * - Simple list is enough
+ *
+ * BENEFITS:
+ * ✅ Uniform treatment of individual and composite
+ * ✅ Easy to add new components
+ * ✅ Simplifies client code
+ * ✅ Flexible tree structures
+ * ✅ Open/Closed Principle
+ * ✅ Single Responsibility
+ * ✅ Recursive operations easy
+ *
+ * DRAWBACKS:
+ * ❌ Can make design overly general
+ * ❌ Hard to restrict component types
+ * ❌ Can be difficult to implement some operations
+ */
+
+// ============================================
+// STRUCTURE OF COMPOSITE PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Component Interface               │
+ * ├─────────────────────────────────────────┤
+ * │ + operation()                           │
+ * │ + add(Component)                        │
+ * │ + remove(Component)                     │
+ * │ + getChild(int)                         │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┴──────────┐
+ *        │                     │
+ * ┌─────────────┐      ┌─────────────────┐
+ * │    Leaf     │      │   Composite     │
+ * ├─────────────┤      ├─────────────────┤
+ * │+ operation()│      │- children: []   │
+ * └─────────────┘      │+ operation()    │
+ *                      │+ add()          │
+ *                      │+ remove()       │
+ *                      │+ getChild()     │
+ *                      └─────────────────┘
+ *                             │
+ *                             │ contains
+ *                             ↓
+ *                      [Component, Component, ...]
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW COMPOSITE PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (Build Tree):
+ * ────────────────────────────────────────
+ * 1. Create leaves (individuals)
+ *    → $john = new Employee('John', 1000)
+ *    → $jane = new Employee('Jane', 1500)
+ *
+ * 2. Create composite (container)
+ *    → $dept = new Department('IT')
+ *
+ * 3. Add leaves to composite
+ *    → $dept->add($john)
+ *    → $dept->add($jane)
+ *
+ * 4. Create nested composites
+ *    → $company = new Department('Company')
+ *    → $company->add($dept)
+ *
+ * OPERATION PHASE (Use Tree):
+ * ────────────────────────────────────────
+ * 5. Call operation on any component
+ *    → $john->getSalary() // Returns 1000
+ *    → $dept->getSalary() // Returns 2500 (sum of children)
+ *    → $company->getSalary() // Returns total of all
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Same method works on leaf and composite
+ * - Composite recursively calls on children
+ * - Client doesn't know if dealing with leaf or composite
+ * - Tree structure
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: COMPONENT INTERFACE
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Common interface for leaf and composite
+ *
+ * CHARACTERISTICS:
+ * - Declares operations for both leaf and composite
+ * - Makes leaf and composite interchangeable
+ * - Client depends only on this interface
+ *
+ * EXAMPLE:
+ * interface Employee {
+ *     public function getSalary(): float;
+ *     public function getName(): string;
+ * }
+ *
+ * WHY IMPORTANT?
+ * - Uniform treatment
+ * - Client code simplified
+ * - Easy to extend
+ */
+
+/**
+ * KEY CONCEPT 2: LEAF
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Individual object with no children
+ *
+ * CHARACTERISTICS:
+ * - Implements component interface
+ * - No add/remove methods (or throws exception)
+ * - Does actual work
+ * - Cannot have children
+ *
+ * EXAMPLE:
+ * class IndividualEmployee implements Employee {
+ *     private $salary;
+ *
+ *     public function getSalary(): float {
+ *         return $this->salary; // Own salary
+ *     }
+ * }
+ *
+ * WHY LEAF?
+ * - Represents end node in tree
+ * - Basic building block
+ * - Actual data/behavior
+ */
+
+/**
+ * KEY CONCEPT 3: COMPOSITE
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Container object that can have children
+ *
+ * CHARACTERISTICS:
+ * - Implements component interface
+ * - Has add/remove methods
+ * - Stores children (leaf or composite)
+ * - Delegates operations to children
+ *
+ * EXAMPLE:
+ * class Department implements Employee {
+ *     private $employees = [];
+ *
+ *     public function add(Employee $emp) {
+ *         $this->employees[] = $emp;
+ *     }
+ *
+ *     public function getSalary(): float {
+ *         $total = 0;
+ *         foreach ($this->employees as $emp) {
+ *             $total += $emp->getSalary(); // Recursive!
+ *         }
+ *         return $total;
+ *     }
+ * }
+ *
+ * WHY COMPOSITE?
+ * - Represents branch node in tree
+ * - Contains other components
+ * - Enables tree structure
+ */
+
+/**
+ * KEY CONCEPT 4: UNIFORMITY
+ * ────────────────────────────────────────
+ *
+ * SAME INTERFACE:
+ * Both leaf and composite implement same interface
+ *
+ * CLIENT CODE:
+ * function printSalary(Employee $emp) {
+ *     echo $emp->getSalary(); // Works for both!
+ * }
+ *
+ * printSalary($john); // Individual
+ * printSalary($dept); // Department
+ *
+ * Client doesn't know which it is!
+ *
+ * BENEFIT:
+ * - Simplified client code
+ * - No if/else to check type
+ * - Same code for all
+ */
+
+// ============================================
+// YOUR USE CASE: ORGANIZATION HIERARCHY
+// ============================================
+
+/**
+ * ORGANIZATION HIERARCHY EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Company has departments and employees
+ * - Departments can have sub-departments
+ * - Need to calculate total salary
+ * - Should work same way for individual and department
+ * - Client shouldn't care about structure
+ *
+ * STRUCTURE:
+ * Company (Department)
+ * ├── IT Department
+ * │   ├── John (Developer)
+ * │   ├── Jane (Developer)
+ * │   └── Backend Team (Sub-department)
+ * │       ├── Alice (Developer)
+ * │       └── Bob (Developer)
+ * ├── HR Department
+ * │   ├── Sarah (HR Manager)
+ * │   └── Mike (Recruiter)
+ * └── CEO (Individual)
+ *
+ * SOLUTION WITH COMPOSITE:
+ * Component: EmployeeInterface
+ * Leaf: Individual Employee
+ * Composite: Department
+ *
+ * Operations:
+ * - getSalary(): Individual returns own, Department returns sum
+ * - getName(): Both return name
+ * - getEmployeeCount(): Individual returns 1, Department returns total
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: FILE SYSTEM
+ * ────────────────────────────────────────
+ * Component: FileSystemNode
+ * Leaf: File
+ * Composite: Folder
+ * Operation: getSize(), delete(), copy()
+ *
+ * EXAMPLE 2: GUI COMPONENTS
+ * ────────────────────────────────────────
+ * Component: Widget
+ * Leaf: Button, Label, TextBox
+ * Composite: Panel, Form
+ * Operation: render(), handleEvent()
+ *
+ * EXAMPLE 3: MENU SYSTEM
+ * ────────────────────────────────────────
+ * Component: MenuItem
+ * Leaf: Action (Open, Save)
+ * Composite: SubMenu
+ * Operation: click(), render()
+ *
+ * EXAMPLE 4: GRAPHICS DRAWING
+ * ────────────────────────────────────────
+ * Component: Shape
+ * Leaf: Circle, Rectangle
+ * Composite: Group
+ * Operation: draw(), move(), getArea()
+ *
+ * EXAMPLE 5: TASK MANAGEMENT
+ * ────────────────────────────────────────
+ * Component: Task
+ * Leaf: SimpleTask
+ * Composite: Project (contains tasks)
+ * Operation: complete(), getProgress()
+ */
+
+// ============================================
+// COMPOSITE PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Eloquent Relationships (Tree structure)
+ *
+ * class Category extends Model {
+ *     public function children() {
+ *         return $this->hasMany(Category::class, 'parent_id');
+ *     }
+ *
+ *     public function getTotalProducts() {
+ *         $count = $this->products()->count();
+ *         foreach ($this->children as $child) {
+ *             $count += $child->getTotalProducts(); // Recursive!
+ *         }
+ *         return $count;
+ *     }
+ * }
+ *
+ * EXAMPLE 2: Validation Rules (Nested)
+ *
+ * // Rules can be nested
+ * [
+ *     'user.name' => 'required',
+ *     'user.email' => 'required|email',
+ *     'user.addresses.*.city' => 'required',
+ * ]
+ *
+ * EXAMPLE 3: Menu Builder
+ *
+ * Menu::make('nav', function($menu) {
+ *     $menu->add('Home');
+ *     $menu->add('About')->submenu(function($sub) {
+ *         $sub->add('Team');
+ *         $sub->add('History');
+ *     });
+ * });
+ *
+ * EXAMPLE 4: Nested Sets (Categories)
+ *
+ * use Kalnoy\Nestedset\NodeTrait;
+ *
+ * class Category extends Model {
+ *     use NodeTrait;
+ *
+ *     // Automatically handles tree structure
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Leaf Has add/remove Methods
+ * ────────────────────────────────────────
+ * PROBLEM: Leaf shouldn't have children
+ * SOLUTION: Throw exception or don't implement
+ *
+ * MISTAKE 2: Client Checks Type
+ * ────────────────────────────────────────
+ * PROBLEM: if ($obj instanceof Composite) defeats purpose
+ * SOLUTION: Use polymorphism, same interface
+ *
+ * MISTAKE 3: Composite Does Actual Work
+ * ────────────────────────────────────────
+ * PROBLEM: Composite should only delegate
+ * SOLUTION: Leaf does work, composite aggregates
+ *
+ * MISTAKE 4: No Common Interface
+ * ────────────────────────────────────────
+ * PROBLEM: Can't treat uniformly
+ * SOLUTION: Always have component interface
+ *
+ * MISTAKE 5: Circular References
+ * ────────────────────────────────────────
+ * PROBLEM: Parent adds itself as child
+ * SOLUTION: Check before adding
+ *
+ * MISTAKE 6: Not Using Recursion
+ * ────────────────────────────────────────
+ * PROBLEM: Manual traversal code
+ * SOLUTION: Let composite call children recursively
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Clear Component Interface
+ * ────────────────────────────────────────
+ * Define operations all components support
+ *
+ * BEST PRACTICE 2: Leaf Simplicity
+ * ────────────────────────────────────────
+ * Leaf should be simple, no children logic
+ *
+ * BEST PRACTICE 3: Composite Delegation
+ * ────────────────────────────────────────
+ * Composite delegates to children, doesn't do work itself
+ *
+ * BEST PRACTICE 4: Meaningful Names
+ * ────────────────────────────────────────
+ * Good: Employee, Department
+ * Bad: Component, Composite
+ *
+ * BEST PRACTICE 5: Use Recursion
+ * ────────────────────────────────────────
+ * Let operations naturally recurse through tree
+ *
+ * BEST PRACTICE 6: Iterator Support
+ * ────────────────────────────────────────
+ * Provide way to traverse children
+ *
+ * BEST PRACTICE 7: Cache Results
+ * ────────────────────────────────────────
+ * If expensive operation, cache in composite
+ *
+ * BEST PRACTICE 8: Type Safety
+ * ────────────────────────────────────────
+ * Use type hints to ensure correct components
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * COMPOSITE vs DECORATOR
+ * ────────────────────────────────────────
+ * Composite: Multiple children (tree)
+ * Decorator: One child (chain)
+ * Composite: Part-whole hierarchy
+ * Decorator: Add behavior
+ *
+ * COMPOSITE vs CHAIN OF RESPONSIBILITY
+ * ────────────────────────────────────────
+ * Composite: All children processed
+ * Chain: One handler processes
+ * Composite: Tree structure
+ * Chain: Linear structure
+ *
+ * COMPOSITE vs VISITOR
+ * ────────────────────────────────────────
+ * Composite: Structure pattern
+ * Visitor: Behavioral pattern
+ * Can combine: Visitor traverses composite
+ *
+ * COMPOSITE vs ITERATOR
+ * ────────────────────────────────────────
+ * Composite: Defines structure
+ * Iterator: Traverses structure
+ * Often used together
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR COMPOSITE PATTERN:
+ * ────────────────────────────────────────
+ *
+ * □ Identify tree structure
+ * □ Create Component interface
+ * □ Define common operations
+ * □ Create Leaf class
+ * □ Implement operations (actual work)
+ * □ Create Composite class
+ * □ Add children storage
+ * □ Implement add/remove
+ * □ Implement operations (delegate to children)
+ * □ Use recursion for tree operations
+ * □ Test with simple tree
+ * □ Test with nested tree
+ * □ Test edge cases (empty composite)
+ * □ Document tree structure
+ * □ Consider caching if needed
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Use Eloquent relationships for tree
+ * □ Consider nested sets package
+ * □ Add database indexes for tree queries
+ * □ Use eager loading for performance
+ * □ Cache expensive tree operations
+ * □ Add validation for circular references
+ * □ Write feature tests
+ * □ Document tree structure in database
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * COMPOSITE PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Compose objects into tree structures
+ *
+ * WHY: Treat individual and group uniformly
+ *
+ * WHEN: Part-whole hierarchies, tree structures
+ *
+ * HOW:
+ * 1. Define component interface
+ * 2. Create leaf (individual)
+ * 3. Create composite (container)
+ * 4. Composite contains components
+ * 5. Both implement same interface
+ * 6. Client uses interface
+ *
+ * COMPONENTS:
+ * - Component: Common interface
+ * - Leaf: Individual (no children)
+ * - Composite: Container (has children)
+ *
+ * BENEFITS:
+ * ✅ Uniform treatment
+ * ✅ Simplified client code
+ * ✅ Easy to extend
+ * ✅ Flexible trees
+ * ✅ Open/Closed
+ *
+ * USE WHEN:
+ * ✅ Tree structure
+ * ✅ Part-whole hierarchy
+ * ✅ Treat uniformly
+ * ✅ Recursive composition
+ *
+ * DON'T USE WHEN:
+ * ❌ Flat structure
+ * ❌ Very different types
+ * ❌ Simple list enough
+ * ❌ No hierarchy needed
+ *
+ * KEY PRINCIPLE:
+ * "Treat leaf and composite the same"
+ *
+ * EXAMPLE:
+ * file.getSize() → own size
+ * folder.getSize() → sum of contents
+ * Same method, different behavior!
+ *
+ * REMEMBER:
+ * - Leaf does work
+ * - Composite delegates
+ * - Recursion is key
+ * - Client doesn't care which
+ * - Tree structure
+ */
