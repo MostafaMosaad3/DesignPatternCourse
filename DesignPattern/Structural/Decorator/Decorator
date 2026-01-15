@@ -1,0 +1,599 @@
+// ============================================
+// DECORATOR DESIGN PATTERN - COMPLETE REFERENCE
+// ============================================
+
+/**
+ * WHAT IS DECORATOR PATTERN?
+ *
+ * The Decorator Pattern attaches additional responsibilities to an object
+ * dynamically. It provides a flexible alternative to subclassing for
+ * extending functionality.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of dressing up:
+ * - You (core object)
+ * - Add shirt (decorator 1)
+ * - Add jacket (decorator 2)
+ * - Add scarf (decorator 3)
+ * - Each layer adds to you
+ * - You're still you, but with more
+ * - Can add/remove layers dynamically
+ *
+ * ANOTHER ANALOGY:
+ * Coffee at cafe:
+ * - Coffee (base)
+ * - Add milk (decorator)
+ * - Add sugar (decorator)
+ * - Add whipped cream (decorator)
+ * - Same coffee, different add-ons
+ * - Each add-on changes price and description
+ * - Can combine any way you want
+ *
+ * MORE ANALOGIES:
+ * - Pizza toppings: Base pizza + cheese + pepperoni + olives
+ * - Car options: Base car + sunroof + leather seats + GPS
+ * - Gift wrapping: Gift + box + ribbon + card
+ * - Text formatting: Text + bold + italic + underline
+ *
+ * COMPONENTS:
+ * 1. Component Interface: Defines interface for objects
+ * 2. Concrete Component: Base object to be decorated
+ * 3. Decorator: Wraps component, implements same interface
+ * 4. Concrete Decorators: Add specific responsibilities
+ *
+ * WHEN TO USE:
+ * - Add responsibilities dynamically
+ * - Avoid subclass explosion
+ * - Responsibilities can be withdrawn
+ * - Extend class without modifying it
+ * - Combine behaviors flexibly
+ * - Alternative to inheritance
+ *
+ * WHEN NOT TO USE:
+ * - Simple addition is enough
+ * - Few combinations
+ * - Order doesn't matter (use simple composition)
+ * - Need to remove decorators later (becomes complex)
+ *
+ * BENEFITS:
+ * ✅ More flexible than inheritance
+ * ✅ Avoids feature-laden classes
+ * ✅ Add/remove responsibilities at runtime
+ * ✅ Combine decorators any way
+ * ✅ Single Responsibility
+ * ✅ Open/Closed Principle
+ * ✅ No class explosion
+ *
+ * DRAWBACKS:
+ * ❌ Many small objects (can be confusing)
+ * ❌ Hard to remove specific decorator
+ * ❌ Order matters (can be tricky)
+ * ❌ Complex instantiation
+ */
+
+// ============================================
+// STRUCTURE OF DECORATOR PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────────┐
+ * │       Component Interface               │
+ * ├─────────────────────────────────────────┤
+ * │ + operation()                           │
+ * └─────────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┴──────────┐
+ *        │                     │
+ * ┌──────────────┐      ┌─────────────────┐
+ * │  Concrete    │      │   Decorator     │
+ * │  Component   │      │   (abstract)    │
+ * ├──────────────┤      ├─────────────────┤
+ * │+ operation() │      │- component      │
+ * └──────────────┘      │+ operation()    │
+ *                       └─────────────────┘
+ *                              △
+ *                              │ extends
+ *                   ┌──────────┴──────────┐
+ *                   │                     │
+ *            ┌──────────────┐      ┌──────────────┐
+ *            │ Decorator A  │      │ Decorator B  │
+ *            ├──────────────┤      ├──────────────┤
+ *            │+ operation() │      │+ operation() │
+ *            └──────────────┘      └──────────────┘
+ *
+ * Decorator wraps Component
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW DECORATOR PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (Build Wrapped Object):
+ * ────────────────────────────────────────
+ * 1. Create base component
+ *    → $coffee = new Coffee()
+ *
+ * 2. Wrap with first decorator
+ *    → $coffee = new Milk($coffee)
+ *
+ * 3. Wrap with second decorator
+ *    → $coffee = new Sugar($coffee)
+ *
+ * 4. Wrap with third decorator
+ *    → $coffee = new WhippedCream($coffee)
+ *
+ * Result: WhippedCream(Sugar(Milk(Coffee)))
+ *
+ * OPERATION PHASE (Call Method):
+ * ────────────────────────────────────────
+ * 5. Call method on outermost decorator
+ *    → $coffee->getCost()
+ *
+ * 6. WhippedCream adds its cost, calls wrapped
+ *    → $wrapped->getCost() + 0.50
+ *
+ * 7. Sugar adds its cost, calls wrapped
+ *    → $wrapped->getCost() + 0.20
+ *
+ * 8. Milk adds its cost, calls wrapped
+ *    → $wrapped->getCost() + 0.30
+ *
+ * 9. Coffee returns base cost
+ *    → 2.00
+ *
+ * Result: 2.00 + 0.30 + 0.20 + 0.50 = 3.00
+ *
+ * KEY POINTS:
+ * ────────────────────────────────────────
+ * - Each decorator wraps previous
+ * - Same interface as component
+ * - Adds behavior before/after delegation
+ * - Chain of responsibility
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: COMPONENT INTERFACE
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Common interface for base and decorators
+ *
+ * CHARACTERISTICS:
+ * - Defines operations
+ * - Both component and decorator implement it
+ * - Enables interchangeability
+ *
+ * EXAMPLE:
+ * interface Beverage {
+ *     public function getCost(): float;
+ *     public function getDescription(): string;
+ * }
+ *
+ * WHY IMPORTANT?
+ * - Decorator can wrap component
+ * - Client uses interface only
+ * - Transparent wrapping
+ */
+
+/**
+ * KEY CONCEPT 2: CONCRETE COMPONENT
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Base object to be decorated
+ *
+ * CHARACTERISTICS:
+ * - Implements component interface
+ * - Provides base functionality
+ * - Can be wrapped by decorators
+ *
+ * EXAMPLE:
+ * class Coffee implements Beverage {
+ *     public function getCost(): float {
+ *         return 2.00; // Base price
+ *     }
+ * }
+ *
+ * WHY BASE?
+ * - Core functionality
+ * - Starting point
+ * - Can work alone or be decorated
+ */
+
+/**
+ * KEY CONCEPT 3: DECORATOR
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Wrapper that adds functionality
+ *
+ * CHARACTERISTICS:
+ * - Implements component interface
+ * - Has reference to wrapped component
+ * - Adds behavior before/after delegation
+ * - Can be wrapped itself
+ *
+ * EXAMPLE:
+ * class Milk implements Beverage {
+ *     private $beverage;
+ *
+ *     public function __construct(Beverage $beverage) {
+ *         $this->beverage = $beverage;
+ *     }
+ *
+ *     public function getCost(): float {
+ *         return $this->beverage->getCost() + 0.30;
+ *     }
+ * }
+ *
+ * WHY WRAP?
+ * - Adds functionality dynamically
+ * - Doesn't modify original
+ * - Can stack multiple decorators
+ */
+
+/**
+ * KEY CONCEPT 4: WRAPPING/NESTING
+ * ────────────────────────────────────────
+ *
+ * VISUALIZATION:
+ *
+ * Coffee → getCost() → 2.00
+ *
+ * Milk(Coffee) → getCost() → Coffee.getCost() + 0.30 → 2.30
+ *
+ * Sugar(Milk(Coffee)) → getCost() →
+ *     Milk.getCost() + 0.20 →
+ *         Coffee.getCost() + 0.30 + 0.20 → 2.50
+ *
+ * NESTING:
+ * Each decorator wraps previous result
+ * Like Russian dolls (matryoshka)
+ * Innermost is base component
+ */
+
+// ============================================
+// YOUR USE CASE: BEVERAGE ORDERING
+// ============================================
+
+/**
+ * BEVERAGE ORDERING SYSTEM EXAMPLE
+ * ────────────────────────────────────────
+ *
+ * PROBLEM:
+ * - Multiple beverage types (Coffee, Tea)
+ * - Multiple condiments (Milk, Sugar, Whipped Cream)
+ * - Can combine any way
+ * - Different combinations = different prices
+ * - Without decorator: class explosion!
+ *
+ * WITHOUT DECORATOR:
+ * Coffee, Tea
+ * CoffeeWithMilk, CoffeeWithSugar, CoffeeWithWhippedCream
+ * CoffeeWithMilkAndSugar, CoffeeWithMilkAndWhippedCream
+ * CoffeeWithSugarAndWhippedCream
+ * CoffeeWithMilkAndSugarAndWhippedCream
+ * TeaWithMilk, TeaWithSugar, TeaWithLemon...
+ *
+ * Result: 20+ classes!
+ *
+ * WITH DECORATOR:
+ * Beverages: Coffee, Tea (2 classes)
+ * Decorators: Milk, Sugar, WhippedCream, Lemon (4 classes)
+ *
+ * Result: 6 classes total!
+ * Can create any combination dynamically!
+ *
+ * SOLUTION STRUCTURE:
+ * Component: Beverage interface
+ * Concrete Components: Coffee, Tea
+ * Decorators: Milk, Sugar, WhippedCream, Lemon
+ *
+ * Usage:
+ * $coffee = new Coffee();
+ * $coffee = new Milk($coffee);
+ * $coffee = new Sugar($coffee);
+ * // Coffee with milk and sugar!
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: I/O STREAMS
+ * ────────────────────────────────────────
+ * Component: Stream
+ * Decorators: BufferedStream, CompressedStream, EncryptedStream
+ * Can combine: EncryptedStream(CompressedStream(FileStream))
+ *
+ * EXAMPLE 2: TEXT FORMATTING
+ * ────────────────────────────────────────
+ * Component: Text
+ * Decorators: Bold, Italic, Underline, Color
+ * Can combine: Bold(Italic(Underline(Text)))
+ *
+ * EXAMPLE 3: NOTIFICATIONS
+ * ────────────────────────────────────────
+ * Component: Notifier
+ * Decorators: EmailNotifier, SMSNotifier, SlackNotifier
+ * Can combine: send via multiple channels
+ *
+ * EXAMPLE 4: LOGGING
+ * ────────────────────────────────────────
+ * Component: Logger
+ * Decorators: TimestampLogger, FileLogger, DatabaseLogger
+ * Can add features to logging
+ *
+ * EXAMPLE 5: UI COMPONENTS
+ * ────────────────────────────────────────
+ * Component: Window
+ * Decorators: ScrollBar, Border, Shadow
+ * Can decorate windows with features
+ */
+
+// ============================================
+// DECORATOR PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL IMPLEMENTATIONS
+ * ────────────────────────────────────────
+ *
+ * EXAMPLE 1: Middleware (Classic Decorator!)
+ *
+ * // Each middleware wraps the next
+ * $response = (new AuthMiddleware)->handle($request, function($req) {
+ *     return (new CorsMiddleware)->handle($req, function($req) {
+ *         return $controller->handle($req);
+ *     });
+ * });
+ *
+ * EXAMPLE 2: Cache Decorator
+ *
+ * class CachedRepository {
+ *     private $repository;
+ *
+ *     public function find($id) {
+ *         return Cache::remember("user.$id", 3600, function() use ($id) {
+ *             return $this->repository->find($id);
+ *         });
+ *     }
+ * }
+ *
+ * EXAMPLE 3: Response Macros
+ *
+ * Response::macro('caps', function ($value) {
+ *     return Response::make(strtoupper($value));
+ * });
+ *
+ * EXAMPLE 4: Collection Pipeline
+ *
+ * collect($items)
+ *     ->filter(fn($x) => $x > 10)  // Decorator
+ *     ->map(fn($x) => $x * 2)      // Decorator
+ *     ->sort()                     // Decorator
+ *     ->values();
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Decorator Not Implementing Interface
+ * ────────────────────────────────────────
+ * PROBLEM: Can't be used interchangeably
+ * SOLUTION: Always implement component interface
+ *
+ * MISTAKE 2: Not Delegating to Wrapped
+ * ────────────────────────────────────────
+ * PROBLEM: Loses base functionality
+ * SOLUTION: Always call wrapped component
+ *
+ * MISTAKE 3: Decorator Knows Too Much
+ * ────────────────────────────────────────
+ * PROBLEM: Tight coupling
+ * SOLUTION: Depend only on interface
+ *
+ * MISTAKE 4: Using When Simple Inheritance Works
+ * ────────────────────────────────────────
+ * PROBLEM: Overengineering
+ * SOLUTION: Use decorator only for dynamic combinations
+ *
+ * MISTAKE 5: Too Many Decorators
+ * ────────────────────────────────────────
+ * PROBLEM: Hard to understand/debug
+ * SOLUTION: Keep decoration chain reasonable
+ *
+ * MISTAKE 6: Order Dependency Not Documented
+ * ────────────────────────────────────────
+ * PROBLEM: Wrong order gives wrong result
+ * SOLUTION: Document if order matters
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Keep Interface Focused
+ * ────────────────────────────────────────
+ * Small interface, easy to implement
+ *
+ * BEST PRACTICE 2: Name Decorators Clearly
+ * ────────────────────────────────────────
+ * Good: MilkDecorator, SugarDecorator
+ * Bad: Decorator1, Wrapper
+ *
+ * BEST PRACTICE 3: Abstract Decorator Base
+ * ────────────────────────────────────────
+ * Common wrapping logic in base class
+ *
+ * BEST PRACTICE 4: Immutable Decorators
+ * ────────────────────────────────────────
+ * Don't modify state of wrapped object
+ *
+ * BEST PRACTICE 5: Document Combinations
+ * ────────────────────────────────────────
+ * Show common decorator combinations
+ *
+ * BEST PRACTICE 6: Use Dependency Injection
+ * ────────────────────────────────────────
+ * Inject wrapped component via constructor
+ *
+ * BEST PRACTICE 7: Keep Decorators Simple
+ * ────────────────────────────────────────
+ * Each adds one responsibility
+ *
+ * BEST PRACTICE 8: Test Combinations
+ * ────────────────────────────────────────
+ * Test various decorator chains
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * DECORATOR vs ADAPTER
+ * ────────────────────────────────────────
+ * Decorator: Adds functionality, same interface
+ * Adapter: Changes interface
+ * Decorator: Wraps to enhance
+ * Adapter: Wraps to convert
+ *
+ * DECORATOR vs PROXY
+ * ────────────────────────────────────────
+ * Decorator: Adds functionality
+ * Proxy: Controls access
+ * Both wrap, different purposes
+ *
+ * DECORATOR vs COMPOSITE
+ * ────────────────────────────────────────
+ * Decorator: Linear chain, one wrapped object
+ * Composite: Tree structure, many children
+ * Decorator: Adds behavior
+ * Composite: Represents hierarchy
+ *
+ * DECORATOR vs INHERITANCE
+ * ────────────────────────────────────────
+ * Decorator: Runtime, flexible, combinable
+ * Inheritance: Compile-time, fixed, single path
+ * Decorator: Better for many combinations
+ * Inheritance: Better for simple extension
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * CHECKLIST FOR DECORATOR PATTERN:
+ * ────────────────────────────────────────
+ *
+ * □ Define component interface
+ * □ Create concrete component (base)
+ * □ Create abstract decorator (optional)
+ * □ Add wrapped component reference
+ * □ Delegate to wrapped component
+ * □ Create concrete decorators
+ * □ Add specific functionality
+ * □ Maintain same interface
+ * □ Test base component alone
+ * □ Test each decorator alone
+ * □ Test decorator combinations
+ * □ Test order variations
+ * □ Document decorator order if matters
+ * □ Keep decorators focused
+ * □ Use meaningful names
+ *
+ * LARAVEL SPECIFIC:
+ * ────────────────────────────────────────
+ *
+ * □ Consider middleware for HTTP decorating
+ * □ Use service container for injection
+ * □ Create decorator service provider
+ * □ Add factory for common combinations
+ * □ Write feature tests
+ * □ Document decorator usage
+ * □ Follow Laravel conventions
+ * □ Add type hints
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * DECORATOR PATTERN IN ONE PAGE:
+ * ────────────────────────────────────────
+ *
+ * WHAT: Wrap object to add functionality dynamically
+ *
+ * WHY: Avoid subclass explosion, flexible combinations
+ *
+ * WHEN: Dynamic responsibilities, multiple combinations
+ *
+ * HOW:
+ * 1. Define component interface
+ * 2. Create base component
+ * 3. Create decorators implementing interface
+ * 4. Decorator wraps component
+ * 5. Decorator delegates to wrapped
+ * 6. Can wrap multiple times
+ *
+ * COMPONENTS:
+ * - Component: Interface
+ * - Concrete Component: Base object
+ * - Decorator: Wrapper that adds functionality
+ *
+ * BENEFITS:
+ * ✅ More flexible than inheritance
+ * ✅ Add/remove at runtime
+ * ✅ Combine any way
+ * ✅ Single Responsibility
+ * ✅ Open/Closed
+ *
+ * USE WHEN:
+ * ✅ Dynamic combinations
+ * ✅ Avoid class explosion
+ * ✅ Add responsibilities at runtime
+ * ✅ Multiple optional features
+ *
+ * DON'T USE WHEN:
+ * ❌ Simple extension enough
+ * ❌ Few combinations
+ * ❌ Order doesn't matter
+ * ❌ Static structure
+ *
+ * KEY PRINCIPLE:
+ * "Wrap to extend, don't modify"
+ *
+ * FORMULA:
+ * Without Decorator: 2^N classes (N features)
+ * With Decorator: N+1 classes (base + decorators)
+ *
+ * EXAMPLE:
+ * Coffee → 2.00
+ * Milk(Coffee) → 2.30
+ * Sugar(Milk(Coffee)) → 2.50
+ * Same interface, stacked functionality!
+ *
+ * REMEMBER:
+ * - Each decorator wraps one
+ * - Same interface always
+ * - Chain/stack decorators
+ * - Delegate to wrapped
+ * - Laravel middleware uses this!
+ */
