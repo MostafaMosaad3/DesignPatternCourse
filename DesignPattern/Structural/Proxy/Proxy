@@ -1,0 +1,1194 @@
+<?php
+
+// ============================================
+// PROXY DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS PROXY PATTERN?
+ *
+ * The Proxy Pattern is a structural design pattern that provides a substitute
+ * or placeholder for another object. The proxy controls access to the original
+ * object, allowing you to perform something either before or after the request
+ * gets through to the original object.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a Credit Card as a Proxy for a Bank Account:
+ * - You don't carry your bank account everywhere
+ * - Credit card acts as a proxy (substitute)
+ * - Card provides same interface (payment)
+ * - Card adds extra features (fraud detection, rewards)
+ * - Card controls access to your actual bank account
+ *
+ * ANOTHER ANALOGY:
+ * Lawyer as a Proxy:
+ * - You hire a lawyer to represent you in court
+ * - Lawyer acts on your behalf (proxy)
+ * - Lawyer has same goal (win case) but different approach
+ * - Lawyer adds expertise and protection
+ * - You don't deal with court directly
+ *
+ * MORE ANALOGIES:
+ * - Hotel Receptionist: Acts as proxy between you and hotel services
+ * - Real Estate Agent: Proxy between buyer and seller
+ * - Customer Service: Proxy between customer and company
+ * - ATM Machine: Proxy for bank teller
+ * - Ambassador: Proxy representing a country
+ * - Secretary: Proxy filtering calls to executive
+ *
+ * COMPONENTS:
+ * 1. Subject Interface: Common interface for RealSubject and Proxy
+ * 2. RealSubject: The actual object doing the real work
+ * 3. Proxy: Substitute that controls access to RealSubject
+ * 4. Client: Uses the Subject interface (doesn't know if Proxy or Real)
+ *
+ * WHEN TO USE:
+ * - Lazy initialization (create expensive object only when needed)
+ * - Access control (restrict access to certain users)
+ * - Caching (store results to avoid repeated expensive operations)
+ * - Logging (track requests to the real object)
+ * - Remote proxy (represent object in different address space)
+ * - Protection proxy (control access based on permissions)
+ * - Smart reference (additional actions when object is accessed)
+ *
+ * WHEN NOT TO USE:
+ * - Simple, direct access is sufficient
+ * - No need for intermediate layer
+ * - Object is already fast enough
+ * - No need for access control or caching
+ * - Adds unnecessary complexity
+ *
+ * BENEFITS:
+ * ✅ Lazy Loading: Create expensive objects only when needed
+ * ✅ Access Control: Restrict who can access the real object
+ * ✅ Caching: Store results, improve performance dramatically
+ * ✅ Logging: Track all requests to the object
+ * ✅ Protection: Add security layer before real object
+ * ✅ Same Interface: Client doesn't know it's using proxy
+ * ✅ Open/Closed Principle: Add functionality without changing real object
+ * ✅ Single Responsibility: Proxy handles extra concerns
+ *
+ * DRAWBACKS:
+ * ❌ Adds extra layer (slight complexity)
+ * ❌ Response time might increase on first request
+ * ❌ Need to maintain both Proxy and RealSubject
+ * ❌ Can be overkill for simple scenarios
+ * ❌ Might make debugging harder (extra layer)
+ */
+
+// ============================================
+// STRUCTURE OF PROXY PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────┐
+ * │       Subject Interface             │
+ * ├─────────────────────────────────────┤
+ * │ + request()                         │
+ * │ + operation()                       │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *        ┌──────────┴──────────┐
+ *        │                     │
+ * ┌──────────────┐      ┌──────────────┐
+ * │ RealSubject  │      │    Proxy     │
+ * ├──────────────┤      ├──────────────┤
+ * │+ request()   │◄─────┤- realSubject │
+ * │+ operation() │      │+ request()   │
+ * └──────────────┘      │+ operation() │
+ *                       └──────────────┘
+ *                              △
+ *                              │ uses
+ *                              │
+ *                       ┌──────────────┐
+ *                       │    Client    │
+ *                       └──────────────┘
+ *
+ * FLOW:
+ * 1. Client calls Proxy->request()
+ * 2. Proxy does extra work (cache check, logging, etc.)
+ * 3. If needed, Proxy calls RealSubject->request()
+ * 4. RealSubject does actual work
+ * 5. Proxy returns result to Client
+ * 6. Client never knows it's talking to a Proxy!
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW PROXY PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (happens once):
+ * ────────────────────────────
+ * 1. Create RealSubject object
+ *    → This is the actual object that does real work
+ *    → Example: RealProductService (makes API calls)
+ *
+ * 2. Create Proxy object
+ *    → Proxy wraps RealSubject
+ *    → Example: ProductServiceProxy(realService)
+ *    → Proxy has reference to RealSubject
+ *
+ * 3. Client gets Proxy (not RealSubject)
+ *    → Client thinks it's just a ProductService
+ *    → Client doesn't know it's a Proxy!
+ *
+ * FIRST REQUEST PHASE (cache miss):
+ * ────────────────────────────
+ * 4. Client calls proxy->getProducts()
+ *    → Client: "Give me products"
+ *
+ * 5. Proxy checks cache
+ *    → Proxy: "Let me check if I have this cached..."
+ *    → Cache is empty (first request)
+ *
+ * 6. Proxy delegates to RealSubject
+ *    → Proxy: "Cache miss! Need to fetch from API"
+ *    → Proxy calls realSubject->getProducts()
+ *
+ * 7. RealSubject does actual work
+ *    → RealSubject: "Making HTTP call to API..."
+ *    → Takes 500ms to fetch data
+ *
+ * 8. RealSubject returns data to Proxy
+ *    → Data flows back to Proxy
+ *
+ * 9. Proxy stores data in cache
+ *    → Proxy: "Let me save this for next time"
+ *    → Cache is now populated
+ *
+ * 10. Proxy returns data to Client
+ *    → Client receives data (took 500ms)
+ *
+ * SECOND REQUEST PHASE (cache hit):
+ * ────────────────────────────
+ * 11. Client calls proxy->getProducts() again
+ *    → Same request, 1 second later
+ *
+ * 12. Proxy checks cache
+ *    → Proxy: "Let me check cache..."
+ *    → Cache HIT! Data is there!
+ *
+ * 13. Proxy returns cached data immediately
+ *    → Proxy: "Here's the cached data!"
+ *    → NO call to RealSubject
+ *    → NO API call
+ *    → Takes only 1ms!
+ *
+ * 14. Client receives data (lightning fast!)
+ *    → Client doesn't know it came from cache
+ *    → Client thinks it's the same service
+ *
+ * RESULT:
+ * ────────────────────────────
+ * - First request: 500ms (API call)
+ * - Second request: 1ms (cache)
+ * - 500× faster!
+ * - Client code unchanged
+ * - RealSubject code unchanged
+ * - All magic happens in Proxy!
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE SUBJECT INTERFACE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The contract that both RealSubject and Proxy must implement.
+ *
+ * WHY NEEDED?
+ * - Ensures Proxy and RealSubject have same methods
+ * - Makes them interchangeable
+ * - Client depends on interface, not implementation
+ * - Follows Dependency Inversion Principle
+ *
+ * EXAMPLE:
+ * interface ProductServiceInterface {
+ *     public function getProducts(): array;
+ *     public function getProduct(int $id): array;
+ * }
+ *
+ * BOTH RealProductService AND ProductServiceProxy implement this!
+ *
+ * BENEFIT:
+ * Client code: ProductServiceInterface $service
+ * Doesn't care if $service is Real or Proxy!
+ */
+
+/**
+ * KEY CONCEPT 2: THE REAL SUBJECT
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The actual object that does the real work.
+ *
+ * WHAT DOES IT DO?
+ * - Contains the actual business logic
+ * - Makes real HTTP calls, database queries, etc.
+ * - Does the expensive operations
+ * - Knows nothing about caching, logging, etc.
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't know it's being proxied
+ * - Doesn't handle caching
+ * - Doesn't do access control
+ * - Pure business logic only
+ *
+ * EXAMPLE:
+ * class RealProductService implements ProductServiceInterface {
+ *     public function getProducts(): array {
+ *         // Makes actual HTTP call
+ *         return Http::get('api.com/products')->json();
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * The actual worker doing the job.
+ */
+
+/**
+ * KEY CONCEPT 3: THE PROXY
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The substitute/placeholder that controls access to RealSubject.
+ *
+ * WHAT DOES IT DO?
+ * - Implements same interface as RealSubject
+ * - Holds reference to RealSubject
+ * - Adds extra functionality (caching, logging, access control)
+ * - Decides when to delegate to RealSubject
+ * - Can do work before/after calling RealSubject
+ *
+ * WHAT DOES IT NOT DO?
+ * - Doesn't contain actual business logic
+ * - Doesn't replace RealSubject's core functionality
+ * - Just adds a layer on top
+ *
+ * TYPES OF PROXIES:
+ * 1. Virtual Proxy (Lazy Loading)
+ * 2. Protection Proxy (Access Control)
+ * 3. Remote Proxy (Different Address Space)
+ * 4. Caching Proxy (Store Results)
+ * 5. Logging Proxy (Track Calls)
+ * 6. Smart Reference Proxy (Additional Actions)
+ *
+ * EXAMPLE:
+ * class ProductServiceProxy implements ProductServiceInterface {
+ *     private $realService;
+ *     private $cache = [];
+ *
+ *     public function getProducts(): array {
+ *         // Extra functionality: Check cache
+ *         if (isset($this->cache['products'])) {
+ *             return $this->cache['products']; // Fast!
+ *         }
+ *
+ *         // Delegate to real subject
+ *         $data = $this->realService->getProducts();
+ *
+ *         // Extra functionality: Store in cache
+ *         $this->cache['products'] = $data;
+ *
+ *         return $data;
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * A smart assistant that decides when to bother the actual worker.
+ */
+
+/**
+ * KEY CONCEPT 4: TRANSPARENCY
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Client doesn't know it's using a Proxy instead of RealSubject.
+ *
+ * WHY IMPORTANT?
+ * - Client code doesn't change
+ * - Same interface for both
+ * - Can swap Real ↔ Proxy easily
+ * - Follows Open/Closed Principle
+ *
+ * EXAMPLE:
+ * // Client code - works with interface
+ * class Controller {
+ *     private $service; // ProductServiceInterface
+ *
+ *     public function __construct(ProductServiceInterface $service) {
+ *         $this->service = $service; // Could be Real or Proxy!
+ *     }
+ *
+ *     public function index() {
+ *         return $this->service->getProducts();
+ *         // Client doesn't know if this is cached or from API!
+ *     }
+ * }
+ *
+ * CONFIGURATION:
+ * // Without Proxy
+ * $service = new RealProductService();
+ *
+ * // With Proxy (just change this line!)
+ * $service = new ProductServiceProxy(new RealProductService());
+ *
+ * // Client code unchanged!
+ * $controller = new Controller($service);
+ */
+
+/**
+ * KEY CONCEPT 5: LAZY INITIALIZATION
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Create expensive objects only when actually needed.
+ *
+ * PROBLEM IT SOLVES:
+ * - Some objects are expensive to create (large images, API connections)
+ * - May not always be needed
+ * - Wasting resources creating them upfront
+ *
+ * HOW PROXY HELPS:
+ * - Proxy is lightweight
+ * - Create RealSubject only when first used
+ * - Subsequent uses reuse same RealSubject
+ *
+ * EXAMPLE:
+ * class ImageProxy implements ImageInterface {
+ *     private $filename;
+ *     private $realImage = null; // Not created yet!
+ *
+ *     public function display() {
+ *         // Create only when needed
+ *         if ($this->realImage === null) {
+ *             $this->realImage = new RealImage($this->filename);
+ *         }
+ *         $this->realImage->display();
+ *     }
+ * }
+ *
+ * BENEFIT:
+ * - Fast startup (Proxy is light)
+ * - Load heavy objects on demand
+ * - Save memory and time
+ */
+
+// ============================================
+// TYPES OF PROXIES IN DETAIL
+// ============================================
+
+/**
+ * TYPE 1: VIRTUAL PROXY (Lazy Loading)
+ * ──────────────────────────────
+ *
+ * PURPOSE: Delay creation of expensive objects until needed
+ *
+ * USE CASE:
+ * - Loading large images
+ * - Database connections
+ * - Heavy object initialization
+ *
+ * EXAMPLE:
+ * class DatabaseProxy {
+ *     private $connection = null;
+ *
+ *     public function query($sql) {
+ *         if ($this->connection === null) {
+ *             $this->connection = new DatabaseConnection();
+ *         }
+ *         return $this->connection->query($sql);
+ *     }
+ * }
+ *
+ * BENEFIT: Don't create connection until actually querying
+ */
+
+/**
+ * TYPE 2: PROTECTION PROXY (Access Control)
+ * ──────────────────────────────
+ *
+ * PURPOSE: Control access based on permissions
+ *
+ * USE CASE:
+ * - Admin-only operations
+ * - User permissions
+ * - Resource access control
+ *
+ * EXAMPLE:
+ * class AdminProxy {
+ *     private $realService;
+ *     private $user;
+ *
+ *     public function deleteUser($id) {
+ *         if (!$this->user->isAdmin()) {
+ *             throw new Exception("Access denied!");
+ *         }
+ *         return $this->realService->deleteUser($id);
+ *     }
+ * }
+ *
+ * BENEFIT: Centralized access control
+ */
+
+/**
+ * TYPE 3: CACHING PROXY (Performance)
+ * ──────────────────────────────
+ *
+ * PURPOSE: Store results to avoid repeated expensive operations
+ *
+ * USE CASE:
+ * - API calls
+ * - Database queries
+ * - Expensive calculations
+ *
+ * EXAMPLE:
+ * class CachingProxy {
+ *     private $realService;
+ *     private $cache = [];
+ *
+ *     public function getProducts() {
+ *         if (isset($this->cache['products'])) {
+ *             return $this->cache['products'];
+ *         }
+ *         $data = $this->realService->getProducts();
+ *         $this->cache['products'] = $data;
+ *         return $data;
+ *     }
+ * }
+ *
+ * BENEFIT: Dramatically faster repeated requests
+ */
+
+/**
+ * TYPE 4: LOGGING PROXY (Monitoring)
+ * ──────────────────────────────
+ *
+ * PURPOSE: Track all requests to the object
+ *
+ * USE CASE:
+ * - Debugging
+ * - Monitoring
+ * - Audit trails
+ *
+ * EXAMPLE:
+ * class LoggingProxy {
+ *     private $realService;
+ *
+ *     public function getProducts() {
+ *         Log::info('getProducts() called');
+ *         $result = $this->realService->getProducts();
+ *         Log::info('getProducts() returned ' . count($result) . ' items');
+ *         return $result;
+ *     }
+ * }
+ *
+ * BENEFIT: Track usage without modifying real service
+ */
+
+/**
+ * TYPE 5: REMOTE PROXY
+ * ──────────────────────────────
+ *
+ * PURPOSE: Represent object in different address space
+ *
+ * USE CASE:
+ * - Distributed systems
+ * - Microservices
+ * - Remote API calls
+ *
+ * EXAMPLE:
+ * class RemoteServiceProxy {
+ *     public function getData() {
+ *         // Call service on another server
+ *         return Http::get('https://api.example.com/data');
+ *     }
+ * }
+ *
+ * BENEFIT: Hide remote communication complexity
+ */
+
+/**
+ * TYPE 6: SMART REFERENCE PROXY
+ * ──────────────────────────────
+ *
+ * PURPOSE: Perform additional actions when object is accessed
+ *
+ * USE CASE:
+ * - Reference counting
+ * - Locking shared resources
+ * - Loading persistent objects
+ *
+ * EXAMPLE:
+ * class SmartReferenceProxy {
+ *     private $referenceCount = 0;
+ *
+ *     public function getData() {
+ *         $this->referenceCount++;
+ *         return $this->realService->getData();
+ *     }
+ * }
+ *
+ * BENEFIT: Track or control object usage
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: IMAGE LOADING
+ * ────────────────────────────
+ * Problem: Loading all images upfront is slow
+ * Solution: Virtual Proxy
+ *
+ * How it works:
+ * - Create lightweight ImageProxy for each image
+ * - Load actual image only when displayed
+ * - Page loads fast, images load on demand
+ *
+ * Code:
+ * $image = new ImageProxy('large_image.jpg'); // Fast!
+ * // ... user scrolls ...
+ * $image->display(); // NOW load the actual image
+ *
+ * EXAMPLE 2: API RATE LIMITING
+ * ────────────────────────────
+ * Problem: Too many API calls, hitting rate limits
+ * Solution: Caching Proxy
+ *
+ * How it works:
+ * - Proxy caches API responses
+ * - First call hits API
+ * - Subsequent calls return cached data
+ * - Reduces API calls by 90%+
+ *
+ * Code:
+ * $proxy = new ApiCachingProxy($realApi);
+ * $data1 = $proxy->getData(); // API call
+ * $data2 = $proxy->getData(); // From cache!
+ *
+ * EXAMPLE 3: DATABASE CONNECTION POOLING
+ * ────────────────────────────
+ * Problem: Creating new DB connection is expensive
+ * Solution: Virtual Proxy
+ *
+ * How it works:
+ * - Proxy creates connection only when needed
+ * - Reuses existing connections
+ * - Closes idle connections
+ * - Manages connection pool
+ *
+ * Code:
+ * $db = new DatabaseProxy(); // No connection yet
+ * $result = $db->query('SELECT *'); // NOW connect
+ *
+ * EXAMPLE 4: ADMIN PANEL PROTECTION
+ * ────────────────────────────
+ * Problem: Need to restrict admin operations
+ * Solution: Protection Proxy
+ *
+ * How it works:
+ * - Proxy checks user permissions
+ * - Allows or denies based on role
+ * - Centralized access control
+ *
+ * Code:
+ * $service = new ProtectionProxy($realService, $user);
+ * $service->deleteUser($id); // Checks if $user is admin
+ *
+ * EXAMPLE 5: LAZY LOADING IN ORM
+ * ────────────────────────────
+ * Problem: Loading all related data is slow
+ * Solution: Virtual Proxy
+ *
+ * How it works:
+ * - ORM returns proxy for related objects
+ * - Load actual data only when accessed
+ * - Example: Laravel's lazy loading
+ *
+ * Code:
+ * $user = User::find(1); // User loaded
+ * $posts = $user->posts; // NOW load posts (lazy)
+ */
+
+// ============================================
+// PROXY PATTERN IN LARAVEL
+// ============================================
+
+/**
+ * LARAVEL'S IMPLEMENTATION OF PROXY
+ * ────────────────────────────
+ *
+ * Laravel uses Proxy pattern extensively!
+ *
+ * EXAMPLE 1: FACADES
+ * ────────────────────────────
+ * Laravel Facades are actually Proxies!
+ *
+ * What you write:
+ * Cache::get('key');
+ *
+ * What actually happens:
+ * 1. Cache is a Facade (Proxy)
+ * 2. Facade resolves actual service from container
+ * 3. Facade delegates call to real service
+ * 4. You get result
+ *
+ * It's a Proxy!
+ * - Cache Facade = Proxy
+ * - Cache Repository = RealSubject
+ * - Client doesn't know the difference
+ *
+ * EXAMPLE 2: ELOQUENT LAZY LOADING
+ * ────────────────────────────
+ * $user = User::find(1);
+ * $posts = $user->posts; // ← This is a Proxy!
+ *
+ * How it works:
+ * 1. $user->posts returns a Proxy
+ * 2. Proxy waits until you actually use it
+ * 3. When you iterate/access, Proxy loads data
+ * 4. Virtual Proxy pattern!
+ *
+ * EXAMPLE 3: QUEUE JOBS
+ * ────────────────────────────
+ * Mail::queue($message);
+ *
+ * How it works:
+ * 1. Queue Facade = Proxy
+ * 2. Real queue driver loaded on demand
+ * 3. Could be Redis, Database, SQS
+ * 4. Facade hides complexity
+ *
+ * IMPLEMENTING PROXY IN LARAVEL:
+ * ────────────────────────────
+ *
+ * // Service Provider
+ * $this->app->singleton(ProductServiceInterface::class, function() {
+ *     $realService = new RealProductService();
+ *     return new ProductServiceProxy($realService);
+ * });
+ *
+ * // Controller
+ * public function __construct(ProductServiceInterface $service) {
+ *     $this->service = $service; // Gets Proxy automatically!
+ * }
+ */
+
+// ============================================
+// PROXY vs SIMILAR PATTERNS
+// ============================================
+
+/**
+ * PROXY vs DECORATOR
+ * ────────────────────────────
+ *
+ * PROXY:
+ * - Controls access to RealSubject
+ * - May not even create RealSubject
+ * - Lazy initialization
+ * - Access control, caching
+ * - Same interface as RealSubject
+ *
+ * DECORATOR:
+ * - Adds new functionality
+ * - Always wraps existing object
+ * - Dynamic composition
+ * - Extends behavior
+ * - Same interface but enhanced
+ *
+ * KEY DIFFERENCE:
+ * Proxy controls access, Decorator adds features
+ *
+ * EXAMPLE:
+ * // Proxy (Cache)
+ * $proxy->getData(); // May not call real service
+ *
+ * // Decorator (Add logging)
+ * $decorator->getData(); // Always calls wrapped object
+ *
+ * PROXY vs ADAPTER
+ * ────────────────────────────
+ *
+ * PROXY:
+ * - Same interface as RealSubject
+ * - Controls access
+ * - Client expects this interface
+ *
+ * ADAPTER:
+ * - Different interface
+ * - Converts interface
+ * - Makes incompatible interfaces work together
+ *
+ * EXAMPLE:
+ * // Proxy
+ * interface Service { getData(); }
+ * class Proxy implements Service { } // Same interface
+ *
+ * // Adapter
+ * interface NewService { getData(); }
+ * class Adapter implements NewService {
+ *     // Adapts OldService (different interface)
+ * }
+ *
+ * PROXY vs FACADE
+ * ────────────────────────────
+ *
+ * PROXY:
+ * - One-to-one relationship
+ * - Proxy wraps one RealSubject
+ * - Same interface
+ * - Controls access
+ *
+ * FACADE:
+ * - One-to-many relationship
+ * - Facade wraps multiple subsystems
+ * - Simplified interface
+ * - Hides complexity
+ *
+ * EXAMPLE:
+ * // Proxy (wraps ONE service)
+ * class Proxy {
+ *     private $realService; // One
+ * }
+ *
+ * // Facade (wraps MULTIPLE)
+ * class Facade {
+ *     private $service1;
+ *     private $service2;
+ *     private $service3; // Many!
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Using Interface
+ * ────────────────────────────
+ * PROBLEM: Proxy and RealSubject tightly coupled
+ * BAD:
+ * class Proxy {
+ *     private RealService $real; // Concrete class!
+ * }
+ *
+ * GOOD:
+ * class Proxy implements ServiceInterface {
+ *     private ServiceInterface $real; // Interface!
+ * }
+ *
+ * MISTAKE 2: Proxy Doing Too Much
+ * ────────────────────────────
+ * PROBLEM: Proxy contains business logic
+ * BAD:
+ * class Proxy {
+ *     public function getData() {
+ *         // Calculating, validating, transforming...
+ *         // This is business logic! Doesn't belong here!
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Proxy {
+ *     public function getData() {
+ *         // Just caching, logging, access control
+ *         return $this->real->getData();
+ *     }
+ * }
+ *
+ * MISTAKE 3: Forgetting to Delegate
+ * ────────────────────────────
+ * PROBLEM: Proxy doesn't call RealSubject
+ * BAD:
+ * class Proxy {
+ *     public function getData() {
+ *         return []; // Where's the real data?
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Proxy {
+ *     public function getData() {
+ *         return $this->real->getData(); // Delegate!
+ *     }
+ * }
+ *
+ * MISTAKE 4: Cache Never Expires
+ * ────────────────────────────
+ * PROBLEM: Stale data forever
+ * BAD:
+ * $this->cache[$key] = $data; // Forever!
+ *
+ * GOOD:
+ * Cache::put($key, $data, 300); // 5 minutes TTL
+ *
+ * MISTAKE 5: Not Handling Cache Failure
+ * ────────────────────────────
+ * PROBLEM: If cache fails, everything breaks
+ * BAD:
+ * return $this->cache->get($key); // What if fails?
+ *
+ * GOOD:
+ * try {
+ *     return $this->cache->get($key);
+ * } catch (Exception $e) {
+ *     return $this->real->getData(); // Fallback!
+ * }
+ *
+ * MISTAKE 6: Creating Proxy for Simple Objects
+ * ────────────────────────────
+ * PROBLEM: Overengineering
+ * BAD:
+ * class StringProxy { // Why???
+ *     private $string;
+ * }
+ *
+ * GOOD:
+ * Only use Proxy for expensive operations:
+ * - API calls
+ * - Database queries
+ * - File operations
+ * - Heavy calculations
+ *
+ * MISTAKE 7: Infinite Recursion
+ * ────────────────────────────
+ * PROBLEM: Proxy calling itself
+ * BAD:
+ * class Proxy {
+ *     public function getData() {
+ *         return $this->getData(); // Calls itself!
+ *     }
+ * }
+ *
+ * GOOD:
+ * class Proxy {
+ *     public function getData() {
+ *         return $this->real->getData(); // Calls real!
+ *     }
+ * }
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Always Use Interface
+ * ────────────────────────────
+ * Both Proxy and RealSubject should implement same interface
+ *
+ * BEST PRACTICE 2: Keep Proxy Lightweight
+ * ────────────────────────────
+ * Proxy should only handle control logic, not business logic
+ *
+ * BEST PRACTICE 3: Make It Transparent
+ * ────────────────────────────
+ * Client should not know it's using a Proxy
+ *
+ * BEST PRACTICE 4: Add Cache Expiration
+ * ────────────────────────────
+ * Cached data should have TTL (Time To Live)
+ *
+ * BEST PRACTICE 5: Handle Failures Gracefully
+ * ────────────────────────────
+ * If Proxy fails (cache down), fallback to RealSubject
+ *
+ * BEST PRACTICE 6: Use Dependency Injection
+ * ────────────────────────────
+ * Inject RealSubject into Proxy, don't create it inside
+ *
+ * BEST PRACTICE 7: Document Proxy Behavior
+ * ────────────────────────────
+ * Comment what the Proxy does (caching? logging? access control?)
+ *
+ * BEST PRACTICE 8: Test Both Proxy and Real
+ * ────────────────────────────
+ * Test Proxy logic and Real service separately
+ *
+ * BEST PRACTICE 9: Use Appropriate Proxy Type
+ * ────────────────────────────
+ * Choose right proxy type for your use case:
+ * - Virtual Proxy for lazy loading
+ * - Caching Proxy for API calls
+ * - Protection Proxy for access control
+ * - Logging Proxy for monitoring
+ *
+ * BEST PRACTICE 10: Monitor Cache Hit Rate
+ * ────────────────────────────
+ * Track how often cache is used vs real service
+ * Helps measure proxy effectiveness
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * STEP-BY-STEP IMPLEMENTATION GUIDE:
+ * ────────────────────────────
+ *
+ * □ Step 1: Create Subject Interface
+ *    - Define all methods both Proxy and Real will implement
+ *    - Example: ProductServiceInterface
+ *
+ * □ Step 2: Create RealSubject
+ *    - Implement the interface
+ *    - Contains actual business logic
+ *    - Example: RealProductService (makes API calls)
+ *
+ * □ Step 3: Create Proxy Class
+ *    - Implement same interface
+ *    - Hold reference to RealSubject
+ *    - Add extra functionality (caching, logging, etc.)
+ *
+ * □ Step 4: Implement Proxy Methods
+ *    - Check cache/conditions first
+ *    - Delegate to RealSubject if needed
+ *    - Store results if applicable
+ *    - Return data to client
+ *
+ * □ Step 5: Register in Service Provider (Laravel)
+ *    - Bind interface to Proxy
+ *    - Proxy wraps RealSubject
+ *
+ * □ Step 6: Use in Client Code
+ *    - Depend on interface, not implementation
+ *    - Client doesn't know if Proxy or Real
+ *
+ * □ Step 7: Test
+ *    - Test Proxy logic (cache hits/misses)
+ *    - Test RealSubject independently
+ *    - Test client integration
+ *
+ * □ Step 8: Monitor
+ *    - Track cache hit rate
+ *    - Measure performance improvement
+ *    - Adjust cache TTL if needed
+ */
+
+// ============================================
+// CODE TEMPLATE
+// ============================================
+
+/**
+ * BASIC PROXY TEMPLATE:
+ * ────────────────────────────
+ *
+ * // 1. Subject Interface
+ * interface ServiceInterface {
+ *     public function operation(): mixed;
+ * }
+ *
+ * // 2. Real Subject
+ * class RealService implements ServiceInterface {
+ *     public function operation(): mixed {
+ *         // Actual expensive work here
+ *         return $this->expensiveOperation();
+ *     }
+ * }
+ *
+ * // 3. Proxy
+ * class ServiceProxy implements ServiceInterface {
+ *     private ServiceInterface $realService;
+ *     private array $cache = [];
+ *
+ *     public function __construct(ServiceInterface $realService) {
+ *         $this->realService = $realService;
+ *     }
+ *
+ *     public function operation(): mixed {
+ *         // Check cache
+ *         if (isset($this->cache['key'])) {
+ *             return $this->cache['key'];
+ *         }
+ *
+ *         // Delegate to real service
+ *         $result = $this->realService->operation();
+ *
+ *         // Store in cache
+ *         $this->cache['key'] = $result;
+ *
+ *         return $result;
+ *     }
+ * }
+ *
+ * // 4. Client Usage
+ * $real = new RealService();
+ * $proxy = new ServiceProxy($real);
+ * $data = $proxy->operation(); // Transparent!
+ */
+
+// ============================================
+// TESTING GUIDE
+// ============================================
+
+/**
+ * HOW TO TEST PROXY PATTERN:
+ * ────────────────────────────
+ *
+ * TEST 1: Cache Miss (First Request)
+ * ────────────────────────────
+ * public function test_first_request_calls_real_service() {
+ *     $real = Mockery::mock(ProductServiceInterface::class);
+ *     $real->shouldReceive('getProducts')
+ *          ->once()
+ *          ->andReturn(['product1']);
+ *
+ *     $proxy = new ProductServiceProxy($real);
+ *     $result = $proxy->getProducts();
+ *
+ *     $this->assertEquals(['product1'], $result);
+ * }
+ *
+ * TEST 2: Cache Hit (Second Request)
+ * ────────────────────────────
+ * public function test_second_request_uses_cache() {
+ *     $real = Mockery::mock(ProductServiceInterface::class);
+ *     $real->shouldReceive('getProducts')
+ *          ->once() // Called only ONCE!
+ *          ->andReturn(['product1']);
+ *
+ *     $proxy = new ProductServiceProxy($real);
+ *     $proxy->getProducts(); // First call
+ *     $proxy->getProducts(); // Second call - from cache!
+ * }
+ *
+ * TEST 3: Cache Expiration
+ * ────────────────────────────
+ * public function test_expired_cache_calls_real_service_again() {
+ *     // Advance time past cache TTL
+ *     // Verify real service called again
+ * }
+ *
+ * TEST 4: Real Service Test
+ * ────────────────────────────
+ * public function test_real_service_fetches_from_api() {
+ *     Http::fake(['*' => Http::response(['products' => []])]);
+ *
+ *     $service = new RealProductService();
+ *     $result = $service->getProducts();
+ *
+ *     Http::assertSent(function ($request) {
+ *         return $request->url() === 'https://api.example.com/products';
+ *     });
+ * }
+ */
+
+// ============================================
+// PERFORMANCE METRICS
+// ============================================
+
+/**
+ * MEASURING PROXY EFFECTIVENESS:
+ * ────────────────────────────
+ *
+ * METRIC 1: Response Time
+ * ────────────────────────────
+ * Without Proxy:
+ * - Request 1: 500ms
+ * - Request 2: 500ms
+ * - Request 3: 500ms
+ * - Average: 500ms
+ *
+ * With Proxy:
+ * - Request 1: 500ms (API + cache)
+ * - Request 2: 1ms (cache)
+ * - Request 3: 1ms (cache)
+ * - Average: 167ms
+ *
+ * IMPROVEMENT: 3× faster!
+ *
+ * METRIC 2: API Call Reduction
+ * ────────────────────────────
+ * 100 requests in 5 minutes:
+ *
+ * Without Proxy: 100 API calls
+ * With Proxy: 1 API call (cache for 5min)
+ *
+ * REDUCTION: 99%!
+ *
+ * METRIC 3: Cache Hit Rate
+ * ────────────────────────────
+ * Formula: (Cache Hits / Total Requests) × 100
+ *
+ * Example:
+ * - Total Requests: 100
+ * - Cache Hits: 95
+ * - Cache Misses: 5
+ * - Hit Rate: 95%
+ *
+ * METRIC 4: Resource Savings
+ * ────────────────────────────
+ * Bandwidth saved:
+ * - Each response: 50KB
+ * - 100 requests without proxy: 5MB
+ * - 100 requests with proxy: 50KB
+ * - Saved: 4.95MB (99%)
+ *
+ * Server CPU saved:
+ * - Each API call: 10ms CPU
+ * - 100 calls without proxy: 1000ms
+ * - 100 calls with proxy: 10ms
+ * - Saved: 990ms (99%)
+ */
+
+// ============================================
+// WHEN TO USE PROXY - DECISION TREE
+// ============================================
+
+/**
+ * DECISION GUIDE:
+ * ────────────────────────────
+ *
+ * Q: Is the operation expensive (>100ms)?
+ *    ├─ No  → Don't use Proxy (overkill)
+ *    └─ Yes → Continue
+ *
+ * Q: Is the data accessed frequently?
+ *    ├─ No  → Don't use Proxy (cache won't help)
+ *    └─ Yes → Continue
+ *
+ * Q: Does data change rarely?
+ *    ├─ No  → Be careful with cache TTL
+ *    └─ Yes → Continue
+ *
+ * Q: Do you need access control?
+ *    ├─ Yes → Use Protection Proxy
+ *    └─ No  → Continue
+ *
+ * Q: Do you need lazy loading?
+ *    ├─ Yes → Use Virtual Proxy
+ *    └─ No  → Continue
+ *
+ * Q: Do you need caching?
+ *    ├─ Yes → Use Caching Proxy ✓
+ *    └─ No  → Maybe you don't need Proxy
+ *
+ * EXAMPLES:
+ *
+ * ✅ USE PROXY FOR:
+ * - API calls (slow, expensive)
+ * - Database queries (repeated often)
+ * - Image loading (heavy, lazy load)
+ * - Admin operations (access control)
+ * - Remote services (network delay)
+ * - Complex calculations (cache results)
+ *
+ * ❌ DON'T USE PROXY FOR:
+ * - Simple getters/setters
+ * - In-memory operations
+ * - Fast operations (<10ms)
+ * - Operations called once
+ * - Simple arithmetic
+ */
