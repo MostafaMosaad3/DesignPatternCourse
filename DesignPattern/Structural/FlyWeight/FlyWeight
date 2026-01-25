@@ -1,0 +1,1029 @@
+// ============================================
+// FLYWEIGHT DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS FLYWEIGHT PATTERN?
+ *
+ * The Flyweight Pattern is a structural design pattern that minimizes memory
+ * usage by sharing common data among multiple objects. Instead of storing
+ * all data in every object, it separates intrinsic (shared) state from
+ * extrinsic (unique) state and shares the intrinsic state among many objects.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a Library System:
+ * - Book Information (Title, Author, ISBN) = INTRINSIC (shared)
+ * - Book Copy (Location, Borrower, Due Date) = EXTRINSIC (unique)
+ * - One book info shared by 100 physical copies
+ * - Don't store title/author 100 times!
+ *
+ * ANOTHER ANALOGY:
+ * Coffee Shop Menu:
+ * - Coffee Type (Name, Recipe, Price) = INTRINSIC (shared)
+ * - Order (Size, Customer, Table) = EXTRINSIC (unique)
+ * - "Latte" recipe same for all latte orders
+ * - Don't duplicate recipe for each order!
+ *
+ * MORE ANALOGIES:
+ * - Text Editor: Character format (font, size) shared, position unique
+ * - Chess Game: Piece type (rules, image) shared, position unique
+ * - Forest Simulation: Tree type (model, texture) shared, position unique
+ * - Particle System: Particle type (sprite, color) shared, position/velocity unique
+ *
+ * COMPONENTS:
+ * 1. Flyweight: Stores intrinsic (shared) state
+ * 2. Context: Stores extrinsic (unique) state and uses flyweight
+ * 3. Flyweight Factory: Creates and manages flyweights
+ * 4. Client: Uses flyweights with contexts
+ *
+ * KEY CONCEPTS:
+ * - INTRINSIC STATE: Data that's shared (same for many objects)
+ * - EXTRINSIC STATE: Data that's unique (different per object)
+ * - SHARING: Multiple contexts share one flyweight
+ * - FACTORY: Ensures only one flyweight per unique intrinsic state
+ *
+ * WHEN TO USE:
+ * - Application uses large number of similar objects
+ * - Memory costs are high due to object quantity
+ * - Most object state can be made extrinsic
+ * - Many groups of objects can share intrinsic state
+ * - Application doesn't depend on object identity
+ * - Games (enemies, particles, tiles)
+ * - Graphics systems (characters, glyphs)
+ * - Document editors (text formatting)
+ *
+ * WHEN NOT TO USE:
+ * - Small number of objects (not worth complexity)
+ * - Objects have mostly unique state
+ * - Need to modify shared state frequently
+ * - Object identity is important
+ * - Simple applications
+ *
+ * BENEFITS:
+ * ✅ Dramatic memory reduction (50-95%)
+ * ✅ Supports massive numbers of objects
+ * ✅ Reduces object creation cost
+ * ✅ Better cache performance
+ * ✅ Faster initialization
+ * ✅ Centralized shared data management
+ * ✅ Scalable to millions of objects
+ *
+ * DRAWBACKS:
+ * ❌ Increased code complexity
+ * ❌ Need to carefully separate intrinsic/extrinsic
+ * ❌ Runtime cost of calculating extrinsic state
+ * ❌ Less intuitive than simple objects
+ * ❌ May complicate serialization
+ * ❌ Thread-safety considerations for shared state
+ */
+
+// ============================================
+// STRUCTURE OF FLYWEIGHT PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────┐
+ * │      Flyweight Interface            │
+ * ├─────────────────────────────────────┤
+ * │ + operation(extrinsicState)         │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *                   │
+ * ┌─────────────────────────────────────┐
+ * │     ConcreteFlyweight               │
+ * ├─────────────────────────────────────┤
+ * │ - intrinsicState (shared)           │
+ * ├─────────────────────────────────────┤
+ * │ + operation(extrinsicState)         │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ creates & manages
+ *                   │
+ * ┌─────────────────────────────────────┐
+ * │     FlyweightFactory                │
+ * ├─────────────────────────────────────┤
+ * │ - flyweights: Map                   │
+ * ├─────────────────────────────────────┤
+ * │ + getFlyweight(key): Flyweight      │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ uses
+ *                   │
+ * ┌─────────────────────────────────────┐
+ * │          Client/Context             │
+ * ├─────────────────────────────────────┤
+ * │ - flyweight: Flyweight              │
+ * │ - extrinsicState (unique)           │
+ * ├─────────────────────────────────────┤
+ * │ + operation()                       │
+ * └─────────────────────────────────────┘
+ *
+ * FLOW:
+ * 1. Client requests flyweight from Factory
+ * 2. Factory checks if flyweight exists
+ * 3. If exists: Return existing flyweight
+ * 4. If not: Create new flyweight, store, return
+ * 5. Client stores reference to flyweight
+ * 6. Client stores extrinsic state separately
+ * 7. Client calls flyweight.operation(extrinsicState)
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW FLYWEIGHT PATTERN WORKS - STEP BY STEP:
+ *
+ * SETUP PHASE (happens once):
+ * ────────────────────────────
+ * 1. Create FlyweightFactory
+ *    → Has empty flyweights map: {}
+ *
+ * 2. Define what is intrinsic vs extrinsic
+ *    → Intrinsic: Type, base stats, sprites (shared)
+ *    → Extrinsic: Position, current health (unique)
+ *
+ * CREATING OBJECTS (happens for each object):
+ * ────────────────────────────
+ * 3. Client needs to create enemy #1 (Weak)
+ *    → Requests flyweight: factory.getFlyweight('Weak')
+ *
+ * 4. Factory checks if 'Weak' flyweight exists
+ *    → Not found in map
+ *
+ * 5. Factory creates new 'Weak' flyweight
+ *    → Stores intrinsic state: type="Weak", health=50, attack=10
+ *    → Adds to map: {'Weak': flyweightObject}
+ *    → Returns flyweight
+ *
+ * 6. Client creates Context for enemy #1
+ *    → Stores extrinsic state: position=(10,20), currentHealth=50
+ *    → Stores reference to flyweight
+ *
+ * 7. Client needs to create enemy #2 (Weak)
+ *    → Requests flyweight: factory.getFlyweight('Weak')
+ *
+ * 8. Factory checks if 'Weak' flyweight exists
+ *    → FOUND in map!
+ *    → Returns SAME flyweight object (reuse!)
+ *
+ * 9. Client creates Context for enemy #2
+ *    → Stores extrinsic state: position=(100,200), currentHealth=50
+ *    → Stores reference to SAME flyweight as enemy #1
+ *
+ * RESULT:
+ * ────────────────────────────
+ * - 1000 Weak enemies created
+ * - Only 1 'Weak' flyweight object exists
+ * - 1000 context objects store position/health
+ * - All 1000 contexts reference same flyweight
+ * - Memory saved: 99%!
+ *
+ * OPERATION PHASE (when using objects):
+ * ────────────────────────────
+ * 10. Client calls enemy1.render()
+ *     → Context calls: flyweight.render(positionX, positionY, health)
+ *     → Flyweight uses its intrinsic state + passed extrinsic state
+ *     → Returns result
+ *
+ * 11. Client calls enemy2.render()
+ *     → Context calls: SAME flyweight.render() but different position/health
+ *     → Flyweight operates on different extrinsic state
+ *     → Returns different result
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: INTRINSIC STATE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * State that is SHARED among many objects.
+ * Data that is THE SAME for multiple instances.
+ *
+ * CHARACTERISTICS:
+ * - Independent of context
+ * - Shareable across objects
+ * - Stored in Flyweight
+ * - Rarely or never changes
+ *
+ * EXAMPLES:
+ * Game Enemy:
+ * - Enemy type name ("Weak", "Strong")
+ * - Base health (50, 100)
+ * - Base attack power (10, 20)
+ * - Sprite image path
+ * - Sound effects
+ *
+ * Text Editor:
+ * - Font family ("Arial", "Times")
+ * - Font size (12, 14, 16)
+ * - Font style (Bold, Italic)
+ * - Color
+ *
+ * Chess Game:
+ * - Piece type (Pawn, Knight, Queen)
+ * - Movement rules
+ * - Piece image
+ * - Point value
+ *
+ * RULE OF THUMB:
+ * If 1000 objects have the same value, it's intrinsic!
+ */
+
+/**
+ * KEY CONCEPT 2: EXTRINSIC STATE
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * State that is UNIQUE to each object.
+ * Data that is DIFFERENT for each instance.
+ *
+ * CHARACTERISTICS:
+ * - Context-dependent
+ * - Cannot be shared
+ * - Stored in Context (outside flyweight)
+ * - Changes frequently
+ *
+ * EXAMPLES:
+ * Game Enemy:
+ * - Current position (x, y)
+ * - Current health
+ * - Current target
+ * - Alive/dead state
+ *
+ * Text Editor:
+ * - Character position in document
+ * - Line number
+ * - Selection state
+ *
+ * Chess Game:
+ * - Piece position on board
+ * - Moved/not moved
+ * - Captured/active
+ *
+ * RULE OF THUMB:
+ * If each of 1000 objects has different value, it's extrinsic!
+ */
+
+/**
+ * KEY CONCEPT 3: FLYWEIGHT FACTORY
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * A factory that creates and manages flyweight objects.
+ * Ensures only ONE flyweight exists per unique intrinsic state.
+ *
+ * RESPONSIBILITIES:
+ * - Create flyweights on demand
+ * - Store created flyweights in pool
+ * - Return existing flyweight if requested again
+ * - Manage flyweight lifecycle
+ *
+ * WHY NEEDED?
+ * - Prevents duplicate flyweights
+ * - Centralizes flyweight creation
+ * - Guarantees sharing
+ * - Makes pattern work correctly
+ *
+ * TYPICAL IMPLEMENTATION:
+ * class FlyweightFactory {
+ *     private static array $flyweights = [];
+ *
+ *     public static function getFlyweight(string $key): Flyweight {
+ *         if (!isset(self::$flyweights[$key])) {
+ *             self::$flyweights[$key] = new ConcreteFlyweight($key);
+ *         }
+ *         return self::$flyweights[$key];
+ *     }
+ * }
+ *
+ * KEY POINT:
+ * Factory is ESSENTIAL for Flyweight pattern.
+ * Without it, clients might create duplicate flyweights!
+ */
+
+/**
+ * KEY CONCEPT 4: SEPARATION OF CONCERNS
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * Clear separation between shared and unique data.
+ *
+ * FLYWEIGHT RESPONSIBILITIES:
+ * - Store intrinsic state only
+ * - Provide operations that use intrinsic + extrinsic
+ * - Be immutable (shared state shouldn't change)
+ * - Be stateless regarding extrinsic data
+ *
+ * CONTEXT RESPONSIBILITIES:
+ * - Store extrinsic state
+ * - Hold reference to flyweight
+ * - Pass extrinsic state to flyweight operations
+ * - Manage unique object behavior
+ *
+ * EXAMPLE:
+ * // Flyweight (shared)
+ * class EnemyType {
+ *     private string $name;        // Intrinsic
+ *     private int $baseHealth;     // Intrinsic
+ *
+ *     public function render(int $x, int $y) { // Extrinsic passed in
+ *         // Use intrinsic + extrinsic
+ *     }
+ * }
+ *
+ * // Context (unique)
+ * class Enemy {
+ *     private EnemyType $type;     // Reference to flyweight
+ *     private int $x, $y;          // Extrinsic
+ *     private int $currentHealth;  // Extrinsic
+ * }
+ */
+
+/**
+ * KEY CONCEPT 5: SHARING VS IDENTITY
+ * ──────────────────────────────
+ *
+ * IMPORTANT:
+ * Flyweights are shared, so object identity doesn't matter.
+ *
+ * WHAT THIS MEANS:
+ * - Can't compare flyweights by reference (===)
+ * - All weak enemies share same flyweight instance
+ * - Flyweights are interchangeable
+ * - Focus on behavior, not identity
+ *
+ * EXAMPLE:
+ * $enemy1 = new Enemy('Weak', 10, 20);
+ * $enemy2 = new Enemy('Weak', 30, 40);
+ *
+ * // Different enemy objects
+ * $enemy1 !== $enemy2 // true
+ *
+ * // But same flyweight!
+ * $enemy1->getType() === $enemy2->getType() // true (same object!)
+ *
+ * IMPLICATION:
+ * Don't rely on flyweight object identity.
+ * Use values/keys instead.
+ */
+
+// ============================================
+// TYPES OF FLYWEIGHT PATTERNS
+// ============================================
+
+/**
+ * TYPE 1: CLASSIC FLYWEIGHT
+ * ──────────────────────────────
+ *
+ * PURPOSE: Share intrinsic state, pass extrinsic as parameters
+ *
+ * STRUCTURE:
+ * - Flyweight stores intrinsic only
+ * - Methods accept extrinsic as parameters
+ * - No extrinsic stored in flyweight
+ *
+ * EXAMPLE:
+ * class CharacterFlyweight {
+ *     private string $char;         // Intrinsic
+ *     private string $font;         // Intrinsic
+ *
+ *     public function render(int $x, int $y) {  // Extrinsic params
+ *         // Draw char at position
+ *     }
+ * }
+ *
+ * BEST FOR:
+ * - Clear separation of concerns
+ * - Thread-safe flyweights
+ * - Immutable shared state
+ */
+
+/**
+ * TYPE 2: COMPOSITE FLYWEIGHT
+ * ──────────────────────────────
+ *
+ * PURPOSE: Flyweight composed of other flyweights
+ *
+ * STRUCTURE:
+ * - Flyweight contains other flyweights
+ * - Hierarchical sharing
+ * - Used for complex objects
+ *
+ * EXAMPLE:
+ * class WeaponFlyweight { ... }
+ * class ArmorFlyweight { ... }
+ *
+ * class EquipmentFlyweight {
+ *     private WeaponFlyweight $weapon;   // Nested flyweight
+ *     private ArmorFlyweight $armor;     // Nested flyweight
+ * }
+ *
+ * BEST FOR:
+ * - Complex object graphs
+ * - Multiple levels of sharing
+ * - Modular design
+ */
+
+/**
+ * TYPE 3: UNSHARED FLYWEIGHT
+ * ──────────────────────────────
+ *
+ * PURPOSE: Some flyweights not shared (edge cases)
+ *
+ * STRUCTURE:
+ * - Most flyweights shared
+ * - Some unique flyweights for special cases
+ * - Still uses factory pattern
+ *
+ * EXAMPLE:
+ * // Shared flyweight
+ * $normalEnemy = factory.getFlyweight('Normal'); // Shared
+ *
+ * // Unshared flyweight (boss)
+ * $bossEnemy = new BossEnemyType(); // Not shared, unique
+ *
+ * BEST FOR:
+ * - Mostly shared, few exceptions
+ * - Special/unique objects
+ * - Flexibility
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: TEXT EDITOR
+ * ────────────────────────────
+ * Problem: Document with 100,000 characters
+ * Without Flyweight: 100,000 objects with font/size/color
+ * With Flyweight: Few font objects, 100,000 positions
+ *
+ * Intrinsic (Flyweight):
+ * - Font family
+ * - Font size
+ * - Font weight
+ * - Color
+ *
+ * Extrinsic (Context):
+ * - Character position
+ * - Character value
+ * - Line number
+ *
+ * RESULT: 90%+ memory reduction!
+ *
+ * EXAMPLE 2: GAME FOREST
+ * ────────────────────────────
+ * Problem: Forest with 10,000 trees
+ * Without Flyweight: 10,000 tree objects with 3D models
+ * With Flyweight: 5 tree type objects, 10,000 positions
+ *
+ * Intrinsic (Flyweight):
+ * - Tree mesh/model
+ * - Tree texture
+ * - Tree type
+ * - Collision mesh
+ *
+ * Extrinsic (Context):
+ * - Position (x, y, z)
+ * - Rotation
+ * - Scale
+ * - Health
+ *
+ * RESULT: Can render millions of trees!
+ *
+ * EXAMPLE 3: PARTICLE SYSTEM
+ * ────────────────────────────
+ * Problem: Explosion with 10,000 particles
+ * Without Flyweight: 10,000 particles with sprite/color
+ * With Flyweight: 1 particle type, 10,000 positions/velocities
+ *
+ * Intrinsic (Flyweight):
+ * - Particle sprite
+ * - Particle color
+ * - Particle size
+ *
+ * Extrinsic (Context):
+ * - Position
+ * - Velocity
+ * - Lifetime
+ * - Acceleration
+ *
+ * RESULT: Smooth performance with massive particle counts!
+ *
+ * EXAMPLE 4: CHESS GAME
+ * ────────────────────────────
+ * Problem: Need to show many chessboards (analysis, variations)
+ * Without Flyweight: Each board has 32 piece objects
+ * With Flyweight: 6 piece types (pawn, rook, etc.), just positions
+ *
+ * Intrinsic (Flyweight):
+ * - Piece type
+ * - Piece image
+ * - Movement rules
+ * - Point value
+ *
+ * Extrinsic (Context):
+ * - Position on board
+ * - Color (black/white)
+ * - Moved status
+ *
+ * RESULT: Can analyze hundreds of board positions simultaneously!
+ *
+ * EXAMPLE 5: WEB ICONS
+ * ────────────────────────────
+ * Problem: Website with 1000 icons
+ * Without Flyweight: 1000 icon objects loaded
+ * With Flyweight: Load each unique icon once, reference many times
+ *
+ * Intrinsic (Flyweight):
+ * - Icon SVG data
+ * - Icon name
+ * - Default size
+ *
+ * Extrinsic (Context):
+ * - Position on page
+ * - Size override
+ * - Color override
+ * - Click handler
+ *
+ * RESULT: Faster page load, less memory!
+ */
+
+// ============================================
+// FLYWEIGHT IN REAL FRAMEWORKS
+// ============================================
+
+/**
+ * FLYWEIGHT IN GAME ENGINES
+ * ────────────────────────────
+ *
+ * Unity3D:
+ * - Prefabs = Flyweights
+ * - Instances share mesh/materials
+ * - Each instance has unique transform
+ *
+ * Unreal Engine:
+ * - Static Meshes = Flyweights
+ * - Instances share geometry
+ * - Each instance has position/rotation
+ *
+ * FLYWEIGHT IN JAVA
+ * ────────────────────────────
+ *
+ * String Pool:
+ * - String literals are flyweights
+ * - "Hello" always same object
+ * - Memory efficient string handling
+ *
+ * Integer Cache:
+ * - Integers -128 to 127 cached
+ * - Integer.valueOf(5) returns same object
+ * - Flyweight for common values
+ *
+ * FLYWEIGHT IN GRAPHICS
+ * ────────────────────────────
+ *
+ * OpenGL/DirectX:
+ * - Textures shared across objects
+ * - Shaders shared across materials
+ * - Meshes instanced
+ *
+ * Web Browsers:
+ * - Font glyphs cached
+ * - Images cached
+ * - CSS styles shared
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Using Factory
+ * ────────────────────────────
+ * PROBLEM: Creating flyweights directly
+ * BAD:
+ * $type1 = new EnemyType('Weak');
+ * $type2 = new EnemyType('Weak'); // Duplicate!
+ *
+ * GOOD:
+ * $type1 = EnemyTypeFactory::get('Weak');
+ * $type2 = EnemyTypeFactory::get('Weak'); // Same object!
+ *
+ * MISTAKE 2: Storing Extrinsic in Flyweight
+ * ────────────────────────────
+ * PROBLEM: Flyweight contains unique state
+ * BAD:
+ * class EnemyType {
+ *     private int $currentHealth; // WRONG! This is extrinsic!
+ * }
+ *
+ * GOOD:
+ * class EnemyType {
+ *     private int $baseHealth; // Correct! Intrinsic
+ * }
+ * class Enemy {
+ *     private int $currentHealth; // Correct! Extrinsic
+ * }
+ *
+ * MISTAKE 3: Modifying Flyweight State
+ * ────────────────────────────
+ * PROBLEM: Changing shared state affects all
+ * BAD:
+ * $flyweight->setBaseHealth(100); // Changes for ALL enemies!
+ *
+ * GOOD:
+ * Make flyweights immutable:
+ * class EnemyType {
+ *     private readonly int $baseHealth; // Cannot change
+ * }
+ *
+ * MISTAKE 4: Wrong Intrinsic/Extrinsic Split
+ * ────────────────────────────
+ * PROBLEM: Marking unique data as intrinsic
+ * BAD:
+ * Intrinsic: position (wrong! each enemy at different position)
+ * Extrinsic: enemy type (wrong! type is shared!)
+ *
+ * GOOD:
+ * Intrinsic: enemy type, base stats
+ * Extrinsic: position, current health
+ *
+ * MISTAKE 5: Using When Not Needed
+ * ────────────────────────────
+ * PROBLEM: Over-engineering simple cases
+ * BAD:
+ * 10 enemies, using flyweight pattern (overkill!)
+ *
+ * GOOD:
+ * Use flyweight when:
+ * - 1000+ objects
+ * - Significant shared state
+ * - Memory is concern
+ *
+ * MISTAKE 6: Thread-Safety Issues
+ * ────────────────────────────
+ * PROBLEM: Shared flyweight modified concurrently
+ * BAD:
+ * Multiple threads modifying flyweight
+ *
+ * GOOD:
+ * - Make flyweights immutable
+ * - Or use proper synchronization
+ * - Pass extrinsic as parameters
+ *
+ * MISTAKE 7: Forgetting About Memory Overhead
+ * ────────────────────────────
+ * PROBLEM: Too many small flyweights
+ * BAD:
+ * 1000 flyweights with 1 object each = overhead!
+ *
+ * GOOD:
+ * Ensure each flyweight shared by many objects
+ * Otherwise, pattern adds complexity without benefit
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Make Flyweights Immutable
+ * ────────────────────────────
+ * Flyweights should not change after creation.
+ * Use readonly properties or final/const.
+ *
+ * BEST PRACTICE 2: Use Factory Pattern
+ * ────────────────────────────
+ * Always create flyweights through factory.
+ * Never instantiate directly.
+ *
+ * BEST PRACTICE 3: Clear Intrinsic/Extrinsic Separation
+ * ────────────────────────────
+ * Document which state is intrinsic vs extrinsic.
+ * Make it obvious in code.
+ *
+ * BEST PRACTICE 4: Measure Before Optimizing
+ * ────────────────────────────
+ * Profile memory usage before applying pattern.
+ * Ensure you actually have a problem to solve.
+ *
+ * BEST PRACTICE 5: Consider Thread-Safety
+ * ────────────────────────────
+ * If multi-threaded, ensure flyweights thread-safe.
+ * Prefer immutability.
+ *
+ * BEST PRACTICE 6: Use Weak References (If Applicable)
+ * ────────────────────────────
+ * In some languages, use weak references for flyweights.
+ * Allows garbage collection when not needed.
+ *
+ * BEST PRACTICE 7: Document Memory Savings
+ * ────────────────────────────
+ * Measure and document memory improvement.
+ * Helps justify pattern complexity.
+ *
+ * BEST PRACTICE 8: Keep Flyweight Interface Simple
+ * ────────────────────────────
+ * Don't overload flyweight with too many responsibilities.
+ * Focus on shared state management.
+ *
+ * BEST PRACTICE 9: Use Descriptive Naming
+ * ────────────────────────────
+ * Name clearly indicates what is shared:
+ * Good: EnemyType, CharacterStyle, ParticleType
+ * Bad: Enemy, Character, Particle
+ *
+ * BEST PRACTICE 10: Consider Serialization
+ * ────────────────────────────
+ * Plan how flyweights will be saved/loaded.
+ * May need special handling.
+ */
+
+// ============================================
+// IMPLEMENTATION CHECKLIST
+// ============================================
+
+/**
+ * STEP-BY-STEP IMPLEMENTATION GUIDE:
+ * ────────────────────────────
+ *
+ * □ Step 1: Identify Objects with Shared State
+ *    - Look for many similar objects
+ *    - Find common data among them
+ *
+ * □ Step 2: Separate Intrinsic from Extrinsic
+ *    - Intrinsic: Data that's same for many objects
+ *    - Extrinsic: Data that's unique per object
+ *
+ * □ Step 3: Create Flyweight Class
+ *    - Store only intrinsic state
+ *    - Make it immutable
+ *    - Accept extrinsic as method parameters
+ *
+ * □ Step 4: Create Flyweight Factory
+ *    - Maintain pool of flyweights
+ *    - Return existing or create new
+ *    - Use appropriate key for lookup
+ *
+ * □ Step 5: Create Context Class
+ *    - Store extrinsic state
+ *    - Hold reference to flyweight
+ *    - Implement behavior using both states
+ *
+ * □ Step 6: Update Client Code
+ *    - Use factory to get flyweights
+ *    - Create contexts with unique data
+ *    - Pass extrinsic to flyweight methods
+ *
+ * □ Step 7: Test Memory Usage
+ *    - Measure before and after
+ *    - Verify sharing is working
+ *    - Ensure correct behavior
+ *
+ * □ Step 8: Document Pattern Usage
+ *    - Explain intrinsic vs extrinsic
+ *    - Document factory usage
+ *    - Note memory savings
+ */
+
+// ============================================
+// DECISION TREE: WHEN TO USE FLYWEIGHT
+// ============================================
+
+/**
+ * DECISION GUIDE:
+ * ────────────────────────────
+ *
+ * Q: Do you have many (1000+) similar objects?
+ *    ├─ No  → Don't use Flyweight
+ *    └─ Yes → Continue
+ *
+ * Q: Is memory usage a concern?
+ *    ├─ No  → Don't use Flyweight (unnecessary optimization)
+ *    └─ Yes → Continue
+ *
+ * Q: Can you identify shared (intrinsic) state?
+ *    ├─ No  → Flyweight won't help (all unique)
+ *    └─ Yes → Continue
+ *
+ * Q: Is most of the state shared?
+ *    ├─ No  → Flyweight might not help much
+ *    └─ Yes → Continue
+ *
+ * Q: Can extrinsic state be computed or passed?
+ *    ├─ No  → Flyweight might be impractical
+ *    └─ Yes → Continue
+ *
+ * Q: Is object identity important?
+ *    ├─ Yes → Be careful, flyweights are shared
+ *    └─ No  → USE FLYWEIGHT PATTERN ✓
+ *
+ * FINAL CHECK:
+ * Estimated memory saving > 50%? → Use Flyweight
+ * Estimated memory saving < 30%? → Reconsider
+ */
+
+// ============================================
+// PERFORMANCE METRICS
+// ============================================
+
+/**
+ * MEASURING FLYWEIGHT EFFECTIVENESS:
+ * ────────────────────────────
+ *
+ * METRIC 1: Memory Reduction
+ * ────────────────────────────
+ * Formula: (MemoryBefore - MemoryAfter) / MemoryBefore × 100
+ *
+ * Example:
+ * - Before: 10,000 enemies × 200 bytes = 2,000,000 bytes
+ * - After: 10,000 contexts × 40 bytes + 2 flyweights × 100 bytes = 400,200 bytes
+ * - Reduction: (2,000,000 - 400,200) / 2,000,000 × 100 = 80%!
+ *
+ * METRIC 2: Object Count
+ * ────────────────────────────
+ * Track flyweights created vs contexts created
+ *
+ * Example:
+ * - Total objects created: 10,000
+ * - Flyweights created: 2
+ * - Contexts created: 10,000
+ * - Sharing ratio: 5,000:1 (5000 contexts per flyweight)
+ *
+ * METRIC 3: Creation Time
+ * ────────────────────────────
+ * Measure time to create all objects
+ *
+ * Without Flyweight:
+ * - Create 10,000 full objects: 100ms
+ *
+ * With Flyweight:
+ * - Create 2 flyweights: 2ms
+ * - Create 10,000 contexts: 20ms
+ * - Total: 22ms
+ * - Improvement: 78% faster!
+ *
+ * METRIC 4: Cache Performance
+ * ────────────────────────────
+ * Better cache locality with smaller objects
+ *
+ * Example:
+ * - Without: 2MB scattered in memory
+ * - With: 400KB more compact
+ * - Better CPU cache hits
+ * - Faster iteration
+ *
+ * METRIC 5: Scalability
+ * ────────────────────────────
+ * How well does it scale with object count?
+ *
+ * 1,000 objects:
+ * - Without Flyweight: 200 KB
+ * - With Flyweight: 40 KB
+ *
+ * 10,000 objects:
+ * - Without Flyweight: 2 MB
+ * - With Flyweight: 400 KB
+ *
+ * 100,000 objects:
+ * - Without Flyweight: 20 MB
+ * - With Flyweight: 4 MB
+ *
+ * Linear scaling with contexts, constant flyweights!
+ */
+
+// ============================================
+// FLYWEIGHT VS SIMILAR PATTERNS
+// ============================================
+
+/**
+ * FLYWEIGHT vs SINGLETON
+ * ────────────────────────────
+ *
+ * FLYWEIGHT:
+ * - Multiple instances (one per unique intrinsic state)
+ * - Managed by factory
+ * - Shares common state
+ * - Many objects share few flyweights
+ *
+ * SINGLETON:
+ * - Only ONE instance globally
+ * - Self-managed
+ * - Global access point
+ * - One instance for entire application
+ *
+ * KEY DIFFERENCE:
+ * Flyweight = Few shared instances
+ * Singleton = One global instance
+ *
+ * EXAMPLE:
+ * // Flyweight (multiple)
+ * $weak = Factory::get('Weak');    // Instance 1
+ * $strong = Factory::get('Strong'); // Instance 2
+ *
+ * // Singleton (one)
+ * $config = Config::getInstance(); // Only instance
+ *
+ * FLYWEIGHT vs OBJECT POOL
+ * ────────────────────────────
+ *
+ * FLYWEIGHT:
+ * - Shares immutable intrinsic state
+ * - Objects never returned to pool
+ * - Focuses on memory reduction
+ * - Flyweights exist permanently
+ *
+ * OBJECT POOL:
+ * - Reuses expensive-to-create objects
+ * - Objects checked out and returned
+ * - Focuses on creation cost
+ * - Objects recycled
+ *
+ * KEY DIFFERENCE:
+ * Flyweight shares state, Pool reuses instances
+ *
+ * EXAMPLE:
+ * // Flyweight (share state)
+ * $enemy1 = new Enemy($weakType, 10, 20);
+ * $enemy2 = new Enemy($weakType, 30, 40); // Share $weakType
+ *
+ * // Object Pool (reuse objects)
+ * $conn1 = pool.checkout(); // Get from pool
+ * pool.checkin($conn1);     // Return to pool
+ * $conn2 = pool.checkout(); // Get same object
+ *
+ * FLYWEIGHT vs PROTOTYPE
+ * ────────────────────────────
+ *
+ * FLYWEIGHT:
+ * - Share intrinsic state
+ * - Multiple contexts reference same flyweight
+ * - Reduces memory
+ * - Flyweight is shared, not cloned
+ *
+ * PROTOTYPE:
+ * - Clone objects to create new ones
+ * - Each clone is independent
+ * - Reduces creation complexity
+ * - Creates separate instances
+ *
+ * KEY DIFFERENCE:
+ * Flyweight shares, Prototype clones
+ *
+ * EXAMPLE:
+ * // Flyweight (share)
+ * $enemy1 = new Enemy($weakType); // References flyweight
+ * $enemy2 = new Enemy($weakType); // References SAME flyweight
+ *
+ * // Prototype (clone)
+ * $enemy1 = $prototype->clone(); // New independent object
+ * $enemy2 = $prototype->clone(); // Another new object
+ *
+ * FLYWEIGHT vs FACADE
+ * ────────────────────────────
+ *
+ * FLYWEIGHT:
+ * - Structural pattern
+ * - Reduces memory usage
+ * - Shares objects
+ * - Multiple small objects
+ *
+ * FACADE:
+ * - Structural pattern
+ * - Simplifies interface
+ * - Hides complexity
+ * - One wrapper for subsystems
+ *
+ * KEY DIFFERENCE:
+ * Different purposes entirely
+ *
+ * FLYWEIGHT vs PROXY
+ * ────────────────────────────
+ *
+ * FLYWEIGHT:
+ * - Shares intrinsic state among many objects
+ * - About memory efficiency
+ * - Many contexts share few flyweights
+ * - Always exists (not lazy)
+ *
+ * PROXY:
+ * - Controls access to single object
+ * - About access control/lazy loading
+ * - One-to-one relationship
+ * - May create on demand
+ *
+ * KEY DIFFERENCE:
+ * Flyweight = many-to-few sharing
+ * Proxy = one-to-one control
+ */
