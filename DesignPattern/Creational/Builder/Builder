@@ -1,0 +1,834 @@
+// ============================================
+// BUILDER DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS BUILDER PATTERN?
+ *
+ * The Builder Pattern is a creational design pattern that separates the
+ * construction of a complex object from its representation, allowing the
+ * same construction process to create different representations.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of building a custom computer:
+ * - You don't get all parts at once
+ * - You choose: CPU, RAM, GPU, Storage step by step
+ * - You can skip optional parts (RGB lights, extra fans)
+ * - At the end, you have a complete working computer
+ * - Different choices = different computers
+ *
+ * ANOTHER ANALOGY:
+ * Building a custom burger:
+ * - Start with bun (required)
+ * - Add patty, cheese, lettuce (step by step)
+ * - Choose sauces, pickles, onions (optional)
+ * - Each customer builds their own combination
+ * - Same process, different burgers
+ *
+ * MORE ANALOGIES:
+ * - Building a House: Foundation → Walls → Roof → Interior (step by step)
+ * - Creating Resume: Header → Experience → Education → Skills (sections)
+ * - Ordering Pizza: Size → Crust → Sauce → Toppings → Extras
+ * - Customizing Car: Model → Color → Engine → Features → Accessories
+ *
+ * COMPONENTS:
+ * 1. Product: The complex object being built
+ * 2. Builder Interface: Defines construction steps
+ * 3. Concrete Builder: Implements the building steps
+ * 4. Director: Orchestrates building process (optional)
+ *
+ * WHEN TO USE:
+ * - When object has many optional parameters (5+)
+ * - When you want to avoid "constructor hell"
+ * - When creation process has multiple steps
+ * - When you need different representations of same object
+ * - When you want immutable objects with many fields
+ * - When construction is complex and needs to be separated
+ *
+ * WHEN NOT TO USE:
+ * - Simple objects with 2-3 parameters (overkill)
+ * - When all parameters are required
+ * - When object construction is trivial
+ * - When you don't need different representations
+ *
+ * BENEFITS:
+ * ✅ Readable Code: Fluent interface is self-documenting
+ * ✅ Flexible Construction: Only set what you need
+ * ✅ Single Responsibility: Separates construction from representation
+ * ✅ Immutability: Can create immutable objects
+ * ✅ Step-by-Step: Build complex objects incrementally
+ * ✅ Reusable: Director can encapsulate common builds
+ * ✅ Validation: Validate before build() returns object
+ *
+ * DRAWBACKS:
+ * ❌ More code (need builder classes)
+ * ❌ Increased complexity for simple objects
+ * ❌ Memory overhead (builder object)
+ * ❌ Not thread-safe by default (if reusing builder)
+ */
+
+// ============================================
+// STRUCTURE OF BUILDER PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────┐
+ * │          Director (Optional)        │
+ * ├─────────────────────────────────────┤
+ * │ - builder: BuilderInterface         │
+ * ├─────────────────────────────────────┤
+ * │ + construct()                       │
+ * │ + buildProduct1()                   │
+ * │ + buildProduct2()                   │
+ * └─────────────────────────────────────┘
+ *                   │ uses
+ *                   ▼
+ * ┌─────────────────────────────────────┐
+ * │       Builder Interface             │
+ * ├─────────────────────────────────────┤
+ * │ + buildPartA(): Builder             │
+ * │ + buildPartB(): Builder             │
+ * │ + buildPartC(): Builder             │
+ * │ + build(): Product                  │
+ * └─────────────────────────────────────┘
+ *                   △
+ *                   │ implements
+ *                   │
+ * ┌─────────────────────────────────────┐
+ * │      ConcreteBuilder                │
+ * ├─────────────────────────────────────┤
+ * │ - product: Product                  │
+ * ├─────────────────────────────────────┤
+ * │ + buildPartA(): Builder             │
+ * │ + buildPartB(): Builder             │
+ * │ + buildPartC(): Builder             │
+ * │ + build(): Product                  │
+ * └─────────────────────────────────────┘
+ *                   │ creates
+ *                   ▼
+ * ┌─────────────────────────────────────┐
+ * │            Product                  │
+ * ├─────────────────────────────────────┤
+ * │ - partA                             │
+ * │ - partB                             │
+ * │ - partC                             │
+ * └─────────────────────────────────────┘
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW BUILDER PATTERN WORKS - STEP BY STEP:
+ *
+ * WITHOUT DIRECTOR (Direct Builder Usage):
+ * ────────────────────────────
+ * 1. Create Builder
+ *    → builder = new NotificationBuilder("message")
+ *    → Builder creates empty Product inside
+ *
+ * 2. Call builder methods (fluent interface)
+ *    → builder.setTitle("Title")
+ *    → builder.setSender("John")
+ *    → builder.setPriority("high")
+ *    → Each method modifies Product and returns 'this'
+ *
+ * 3. Call build() to get final Product
+ *    → product = builder.build()
+ *    → Returns the fully constructed Product
+ *
+ * 4. Use the Product
+ *    → product.display()
+ *
+ *
+ * WITH DIRECTOR (Pre-configured Builds):
+ * ────────────────────────────
+ * 1. Create Builder
+ *    → builder = new NotificationBuilder("message")
+ *
+ * 2. Create Director
+ *    → director = new NotificationDirector(builder)
+ *
+ * 3. Call Director's pre-configured method
+ *    → product = director.buildUrgentNotification("Alert!")
+ *    → Director internally calls multiple builder methods
+ *    → Returns fully built Product
+ *
+ * 4. Use the Product
+ *    → product.display()
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: THE PRODUCT
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The complex object you want to create
+ *
+ * WHAT DOES IT HAVE?
+ * - Required attributes (must be set)
+ * - Optional attributes (can be null/default)
+ * - Many configuration options
+ *
+ * CHARACTERISTICS:
+ * - Usually has 5+ attributes
+ * - Mix of required and optional fields
+ * - Complex initialization logic
+ *
+ * EXAMPLE:
+ * class Notification {
+ *     message (required)
+ *     title (optional)
+ *     sender (optional)
+ *     priority (optional)
+ *     attachments (optional)
+ *     actions (optional)
+ * }
+ *
+ * THINK OF IT AS:
+ * The final assembled computer you ordered
+ */
+
+/**
+ * KEY CONCEPT 2: THE BUILDER
+ * ──────────────────────────────
+ *
+ * WHAT IS IT?
+ * The object that constructs the Product step by step
+ *
+ * WHAT DOES IT DO?
+ * - Holds reference to Product being built
+ * - Provides methods to set each attribute
+ * - Returns 'this' for method chaining (fluent interface)
+ * - Returns final Product via build() method
+ *
+ * KEY METHODS:
+ * - setPartX(): Sets part and returns 'this'
+ * - build(): Returns the final Product
+ *
+ * FLUENT INTERFACE:
+ * builder.setA().setB().setC().build()
+ * Each method returns 'this' so you can chain
+ *
+ * EXAMPLE:
+ * class NotificationBuilder {
+ *     private product: Notification
+ *
+ *     setTitle(title) {
+ *         product.setTitle(title)
+ *         return this  // ← KEY! Returns self
+ *     }
+ *
+ *     build() {
+ *         return product
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * The computer assembly technician
+ */
+
+/**
+ * KEY CONCEPT 3: THE BUILDER INTERFACE
+ * ──────────────────────────────────────
+ *
+ * WHY USE INTERFACE?
+ * - Defines contract for all builders
+ * - Allows multiple builder implementations
+ * - Director can work with any builder
+ * - Follows Dependency Inversion Principle
+ *
+ * EXAMPLE:
+ * interface NotificationBuilderInterface {
+ *     setTitle(title): this
+ *     setSender(name): this
+ *     build(): Notification
+ * }
+ *
+ * BENEFITS:
+ * - Can create different builders for same Product
+ * - Easy to test with mock builders
+ * - Swappable implementations
+ */
+
+/**
+ * KEY CONCEPT 4: THE DIRECTOR (Optional)
+ * ────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Orchestrates the builder to create pre-configured products
+ *
+ * WHAT DOES IT DO?
+ * - Encapsulates common building sequences
+ * - Provides convenience methods
+ * - Hides building complexity from client
+ *
+ * WHEN TO USE:
+ * - When you have common configurations
+ * - When building process is complex
+ * - When you want to reuse construction logic
+ *
+ * EXAMPLE:
+ * class NotificationDirector {
+ *     buildSimple() {
+ *         return builder
+ *             .setTimestamp()
+ *             .build()
+ *     }
+ *
+ *     buildUrgent(title) {
+ *         return builder
+ *             .setTitle(title)
+ *             .setPriority("urgent")
+ *             .setVibrate(true)
+ *             .build()
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * Pre-configured computer bundles (Gaming PC, Office PC)
+ */
+
+/**
+ * KEY CONCEPT 5: FLUENT INTERFACE
+ * ──────────────────────────────────
+ *
+ * WHAT IS IT?
+ * Method chaining that reads like English
+ *
+ * HOW IT WORKS:
+ * Each method returns 'this' (self reference)
+ *
+ * EXAMPLE:
+ * notification = builder
+ *     .setTitle("Hello")
+ *     .setSender("John")
+ *     .setPriority("high")
+ *     .build()
+ *
+ * BENEFITS:
+ * - Highly readable
+ * - Self-documenting
+ * - Less code
+ * - Clear intent
+ *
+ * WITHOUT FLUENT:
+ * builder.setTitle("Hello")
+ * builder.setSender("John")
+ * builder.setPriority("high")
+ * notification = builder.build()
+ *
+ * WITH FLUENT:
+ * notification = builder
+ *     .setTitle("Hello")
+ *     .setSender("John")
+ *     .setPriority("high")
+ *     .build()
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: HTTP REQUEST
+ * ────────────────────────────
+ * Product: HttpRequest
+ * Builder: HttpRequestBuilder
+ *
+ * request = new HttpRequestBuilder("https://api.com")
+ *     .setMethod("POST")
+ *     .addHeader("Content-Type", "application/json")
+ *     .addHeader("Authorization", "Bearer token")
+ *     .setBody({data: "value"})
+ *     .setTimeout(5000)
+ *     .setRetries(3)
+ *     .build()
+ *
+ * EXAMPLE 2: SQL QUERY
+ * ────────────────────────────
+ * Product: SqlQuery
+ * Builder: QueryBuilder
+ *
+ * query = new QueryBuilder()
+ *     .select("name", "email")
+ *     .from("users")
+ *     .where("age", ">", 18)
+ *     .orderBy("created_at", "DESC")
+ *     .limit(10)
+ *     .build()
+ *
+ * EXAMPLE 3: EMAIL MESSAGE
+ * ────────────────────────────
+ * Product: Email
+ * Builder: EmailBuilder
+ *
+ * email = new EmailBuilder()
+ *     .to("user@example.com")
+ *     .from("admin@company.com")
+ *     .subject("Welcome!")
+ *     .body("Thanks for joining")
+ *     .addAttachment("welcome.pdf")
+ *     .setPriority("high")
+ *     .build()
+ *
+ * EXAMPLE 4: UI DIALOG
+ * ────────────────────────────
+ * Product: Dialog
+ * Builder: DialogBuilder
+ *
+ * dialog = new DialogBuilder()
+ *     .setTitle("Confirm Action")
+ *     .setMessage("Are you sure?")
+ *     .addButton("Yes", onYes)
+ *     .addButton("No", onNo)
+ *     .setIcon("warning")
+ *     .setClosable(true)
+ *     .build()
+ *
+ * EXAMPLE 5: PDF DOCUMENT
+ * ────────────────────────────
+ * Product: PDF
+ * Builder: PDFBuilder
+ *
+ * pdf = new PDFBuilder()
+ *     .setTitle("Report")
+ *     .addPage()
+ *     .addHeader("Monthly Report")
+ *     .addText("Content here")
+ *     .addImage("chart.png")
+ *     .addFooter("Page 1")
+ *     .setMargins(20, 20, 20, 20)
+ *     .build()
+ */
+
+// ============================================
+// BUILDER PATTERN IN POPULAR FRAMEWORKS
+// ============================================
+
+/**
+ * LARAVEL QUERY BUILDER
+ * ────────────────────────────
+ *
+ * Laravel uses Builder Pattern extensively!
+ *
+ * EXAMPLE:
+ *
+ * $users = DB::table('users')
+ *     ->select('name', 'email')
+ *     ->where('active', true)
+ *     ->where('age', '>', 18)
+ *     ->orderBy('created_at', 'desc')
+ *     ->limit(10)
+ *     ->get();
+ *
+ * This IS the Builder Pattern!
+ * - Product: SQL Query
+ * - Builder: QueryBuilder
+ * - Fluent Interface: Method chaining
+ * - build(): get() or first()
+ *
+ * ELOQUENT BUILDER:
+ *
+ * User::where('status', 'active')
+ *     ->whereHas('posts', function($q) {
+ *         $q->where('published', true);
+ *     })
+ *     ->with('profile')
+ *     ->orderBy('name')
+ *     ->get();
+ *
+ * NOTIFICATION BUILDER:
+ *
+ * Notification::route('mail', 'user@example.com')
+ *     ->route('slack', 'webhook-url')
+ *     ->notify(new InvoicePaid($invoice));
+ */
+
+/**
+ * JAVASCRIPT EXAMPLES
+ * ────────────────────────────
+ *
+ * FETCH API:
+ * fetch('https://api.com', {
+ *     method: 'POST',
+ *     headers: {
+ *         'Content-Type': 'application/json',
+ *         'Authorization': 'Bearer token'
+ *     },
+ *     body: JSON.stringify(data)
+ * })
+ *
+ * MOMENT.JS:
+ * moment()
+ *     .add(7, 'days')
+ *     .subtract(1, 'month')
+ *     .format('YYYY-MM-DD')
+ *
+ * JQUERY:
+ * $('div')
+ *     .addClass('active')
+ *     .css('color', 'red')
+ *     .fadeIn()
+ *     .slideDown()
+ *
+ * AXIOS:
+ * axios({
+ *     method: 'post',
+ *     url: '/api/data',
+ *     data: { name: 'John' },
+ *     headers: { 'X-Custom': 'value' },
+ *     timeout: 5000
+ * })
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Not Returning 'this'
+ * ────────────────────────────
+ * PROBLEM: Can't chain methods
+ *
+ * // ❌ WRONG
+ * setTitle(title) {
+ *     this.product.setTitle(title)
+ *     // Missing return this!
+ * }
+ *
+ * // ✅ CORRECT
+ * setTitle(title) {
+ *     this.product.setTitle(title)
+ *     return this
+ * }
+ *
+ * MISTAKE 2: Mutable Product After build()
+ * ────────────────────────────
+ * PROBLEM: Product can be changed after creation
+ * SOLUTION: Make Product immutable or clone it
+ *
+ * // ✅ BETTER
+ * build() {
+ *     return clone(this.product) // Return copy
+ * }
+ *
+ * MISTAKE 3: Using Builder for Simple Objects
+ * ────────────────────────────
+ * PROBLEM: Overengineering
+ *
+ * // ❌ OVERKILL for 2 parameters
+ * user = new UserBuilder()
+ *     .setName("John")
+ *     .setEmail("john@example.com")
+ *     .build()
+ *
+ * // ✅ JUST USE CONSTRUCTOR
+ * user = new User("John", "john@example.com")
+ *
+ * MISTAKE 4: Not Validating in build()
+ * ────────────────────────────
+ * PROBLEM: Invalid objects created
+ *
+ * // ✅ VALIDATE BEFORE RETURNING
+ * build() {
+ *     if (!this.product.hasRequiredFields()) {
+ *         throw new Error("Missing required fields")
+ *     }
+ *     return this.product
+ * }
+ *
+ * MISTAKE 5: Reusing Builder Without Reset
+ * ────────────────────────────
+ * PROBLEM: Previous state affects new build
+ *
+ * // ❌ WRONG
+ * builder.setTitle("First").build()
+ * builder.setSender("John").build() // Still has "First" title!
+ *
+ * // ✅ CREATE NEW BUILDER
+ * new Builder().setTitle("First").build()
+ * new Builder().setSender("John").build()
+ *
+ * MISTAKE 6: Too Many Required Parameters in Constructor
+ * ────────────────────────────
+ * PROBLEM: Defeats purpose of builder
+ *
+ * // ❌ WRONG
+ * new Builder(req1, req2, req3, req4) // Still constructor hell!
+ *
+ * // ✅ CORRECT
+ * new Builder(onlyMessage) // Minimal required params
+ *
+ * MISTAKE 7: Forgetting Interface
+ * ────────────────────────────
+ * PROBLEM: Can't swap implementations, hard to test
+ * SOLUTION: Always use interface for builders
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Fluent Interface
+ * ────────────────────────────
+ * Always return 'this' from builder methods
+ *
+ * setTitle(title) {
+ *     this.title = title
+ *     return this // ← Essential!
+ * }
+ *
+ * BEST PRACTICE 2: Use Meaningful Method Names
+ * ────────────────────────────
+ * Good: setTitle(), addAttachment(), withPriority()
+ * Bad: set1(), add(), config()
+ *
+ * BEST PRACTICE 3: Required vs Optional
+ * ────────────────────────────
+ * Required: Pass in constructor
+ * Optional: Set via builder methods
+ *
+ * new Builder(requiredMessage)
+ *     .setOptionalTitle()
+ *     .setOptionalSender()
+ *
+ * BEST PRACTICE 4: Immutable Products
+ * ────────────────────────────
+ * Return immutable objects from build()
+ * Prevents modification after creation
+ *
+ * BEST PRACTICE 5: Validation in build()
+ * ────────────────────────────
+ * Validate before returning product
+ *
+ * build() {
+ *     this.validate()
+ *     return this.product
+ * }
+ *
+ * BEST PRACTICE 6: Use Director for Common Builds
+ * ────────────────────────────
+ * Encapsulate frequently used configurations
+ *
+ * director.buildUrgent()
+ * director.buildSimple()
+ *
+ * BEST PRACTICE 7: Document Builder
+ * ────────────────────────────
+ * Add comments showing example usage
+ *
+ * BEST PRACTICE 8: Type Hints/Interfaces
+ * ────────────────────────────
+ * Use types for better IDE support
+ *
+ * setTitle(title: string): Builder
+ * build(): Notification
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * BUILDER vs FACTORY
+ * ────────────────────────────
+ * Builder: Step-by-step construction, many options
+ * Factory: One-step creation, fixed configurations
+ *
+ * Use Builder: Complex object with many optional parts
+ * Use Factory: Simple object with few variations
+ *
+ * BUILDER vs PROTOTYPE
+ * ────────────────────────────
+ * Builder: Constructs new object from scratch
+ * Prototype: Clones existing object
+ *
+ * Use Builder: Need custom configuration each time
+ * Use Prototype: Need copies of existing objects
+ *
+ * BUILDER vs ABSTRACT FACTORY
+ * ────────────────────────────
+ * Builder: Builds one complex object
+ * Abstract Factory: Creates families of related objects
+ *
+ * Use Builder: Single complex object
+ * Use Abstract Factory: Multiple related objects
+ *
+ * BUILDER vs FLUENT INTERFACE
+ * ────────────────────────────
+ * Builder: Design pattern for object construction
+ * Fluent Interface: Programming style (method chaining)
+ *
+ * Note: Builder USES fluent interface technique!
+ */
+
+// ============================================
+// QUICK REFERENCE CHECKLIST
+// ============================================
+
+/**
+ * IMPLEMENTATION CHECKLIST:
+ * ────────────────────────────
+ *
+ * □ Identify complex object (Product) with many attributes
+ * □ Separate required vs optional attributes
+ * □ Create Product class
+ * □ Create Builder interface (if needed)
+ * □ Create Concrete Builder class
+ * □ In Builder constructor, create empty Product
+ * □ Add setter methods that return 'this'
+ * □ Add build() method that returns Product
+ * □ Optional: Create Director for common builds
+ * □ Optional: Add validation in build() method
+ * □ Test fluent interface works
+ * □ Document example usage
+ *
+ * WHEN TO USE BUILDER:
+ * ────────────────────────────
+ *
+ * ✅ Object has 5+ attributes
+ * ✅ Many attributes are optional
+ * ✅ Need different configurations
+ * ✅ Want readable, fluent code
+ * ✅ Complex construction logic
+ * ✅ Need immutable objects
+ *
+ * WHEN NOT TO USE BUILDER:
+ * ────────────────────────────
+ *
+ * ❌ Simple object (2-3 params)
+ * ❌ All attributes required
+ * ❌ No optional configuration
+ * ❌ Performance critical
+ * ❌ Small/simple project
+ */
+
+// ============================================
+// CODE SMELL: CONSTRUCTOR HELL
+// ============================================
+
+/**
+ * PROBLEM: Too Many Constructor Parameters
+ * ────────────────────────────
+ *
+ * // ❌ CONSTRUCTOR HELL
+ * notification = new Notification(
+ *     "message",
+ *     "title",
+ *     "sender",
+ *     "avatar",
+ *     timestamp,
+ *     "priority",
+ *     attachments,
+ *     actions,
+ *     "icon",
+ *     "sound",
+ *     vibrate
+ * )
+ *
+ * PROBLEMS:
+ * - Hard to remember order
+ * - Must pass nulls for unused params
+ * - Not readable
+ * - Error-prone
+ * - Hard to maintain
+ *
+ * SOLUTION: Use Builder Pattern!
+ * ────────────────────────────
+ *
+ * // ✅ BUILDER PATTERN
+ * notification = new NotificationBuilder("message")
+ *     .setTitle("title")
+ *     .setSender("sender", "avatar")
+ *     .setTimestamp(timestamp)
+ *     .setPriority("priority")
+ *     .setIcon("icon")
+ *     .setSound("sound")
+ *     .setVibrate(vibrate)
+ *     .build()
+ *
+ * BENEFITS:
+ * - Clear what each parameter is
+ * - Only set what you need
+ * - Easy to read
+ * - Self-documenting
+ * - Easy to extend
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * BUILDER PATTERN IN ONE PAGE:
+ * ────────────────────────────
+ *
+ * WHAT: Construct complex objects step by step
+ *
+ * WHY: Avoid constructor hell, improve readability, flexibility
+ *
+ * WHEN: Complex objects with many optional parameters
+ *
+ * HOW:
+ * 1. Create Builder with required params
+ * 2. Call setter methods (fluent interface)
+ * 3. Call build() to get final Product
+ *
+ * COMPONENTS:
+ * - Product: Complex object being built
+ * - Builder Interface: Defines building steps
+ * - Concrete Builder: Implements building steps
+ * - Director: Pre-configured builds (optional)
+ *
+ * BENEFITS:
+ * ✅ Readable fluent code
+ * ✅ Flexible configuration
+ * ✅ Only set what you need
+ * ✅ Easy to extend
+ * ✅ Immutable objects possible
+ *
+ * KEY TECHNIQUE:
+ * Fluent Interface: Each method returns 'this'
+ *
+ * EXAMPLE:
+ * product = new Builder(required)
+ *     .setOptional1(value)
+ *     .setOptional2(value)
+ *     .build()
+ *
+ * REMEMBER:
+ * - Return 'this' from setters
+ * - Validate in build()
+ * - Use for 5+ parameters
+ * - Don't overuse on simple objects
+ *
+ * IN LARAVEL:
+ * - Query Builder: DB::table()->where()->get()
+ * - Eloquent Builder: Model::where()->with()->get()
+ * - Notification: Notification::route()->notify()
+ *
+ * USE WHEN:
+ * ✅ Constructor has 5+ params
+ * ✅ Many optional features
+ * ✅ Want readable code
+ * ✅ Complex construction
+ *
+ * DON'T USE WHEN:
+ * ❌ Simple 2-3 params
+ * ❌ All required params
+ * ❌ No optional config
+ * ❌ Performance critical
+ *
+ * GOLDEN RULE:
+ * If you're passing more than 3 nulls to a constructor,
+ * you probably need the Builder Pattern!
+ */
