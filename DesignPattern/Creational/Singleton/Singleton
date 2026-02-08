@@ -1,0 +1,855 @@
+// ============================================
+// SINGLETON DESIGN PATTERN
+// ============================================
+
+/**
+ * WHAT IS SINGLETON PATTERN?
+ *
+ * The Singleton Pattern is a creational design pattern that ensures a class
+ * has only ONE instance and provides a global point of access to that instance.
+ *
+ * REAL-WORLD ANALOGY:
+ * Think of a country's president:
+ * - Only ONE president at a time
+ * - Everyone knows who the president is
+ * - No matter where you are, it's the same president
+ * - Can't create a new president whenever you want
+ * - Global access to the president's office
+ *
+ * ANOTHER ANALOGY:
+ * Database connection pool:
+ * - Only ONE pool for the entire application
+ * - Everyone shares the same pool
+ * - Creating multiple pools wastes resources
+ * - Centralized management
+ *
+ * MORE ANALOGIES:
+ * - Sun in Solar System: Only one sun, everyone sees the same sun
+ * - Government Capital: Only one capital city per country
+ * - Company CEO: Only one CEO at a time
+ * - Print Spooler: Only one print queue manager
+ * - Cache Manager: One cache for the entire app
+ *
+ * COMPONENTS:
+ * 1. Private Constructor: Prevents direct instantiation
+ * 2. Private Clone: Prevents cloning
+ * 3. Static Instance: Holds the single instance
+ * 4. Static getInstance(): Provides global access
+ *
+ * WHEN TO USE:
+ * - When exactly ONE instance is needed globally
+ * - Database connections, loggers, caches
+ * - Configuration managers
+ * - Thread pools, connection pools
+ * - Device drivers (printer, display)
+ * - File managers
+ * - When you need controlled access to shared resource
+ *
+ * WHEN NOT TO USE:
+ * - When you need multiple instances
+ * - When testing (hard to mock singletons)
+ * - When state needs to be different per user/session
+ * - Simple utility classes (use static methods instead)
+ * - When dependency injection is better
+ *
+ * BENEFITS:
+ * ✅ Controlled Access: Single point of access
+ * ✅ Reduced Memory: Only one instance in memory
+ * ✅ Global Access: Available everywhere
+ * ✅ Lazy Initialization: Created only when needed
+ * ✅ Consistent State: Same state across application
+ * ✅ Resource Management: Prevents resource conflicts
+ * ✅ Thread Safety: Can be made thread-safe
+ *
+ * DRAWBACKS:
+ * ❌ Global State: Can make code harder to test
+ * ❌ Hidden Dependencies: Not obvious from constructor
+ * ❌ Tight Coupling: Hard to replace or extend
+ * ❌ Violates Single Responsibility: Class controls its instantiation
+ * ❌ Threading Issues: Need extra care in multi-threaded apps
+ * ❌ Hard to Unit Test: Difficult to mock
+ */
+
+// ============================================
+// STRUCTURE OF SINGLETON PATTERN
+// ============================================
+
+/**
+ * PATTERN STRUCTURE:
+ *
+ * ┌─────────────────────────────────────┐
+ * │          Singleton                  │
+ * ├─────────────────────────────────────┤
+ * │ - static instance: Singleton        │
+ * ├─────────────────────────────────────┤
+ * │ - __construct()  [PRIVATE]          │
+ * │ - __clone()      [PRIVATE]          │
+ * │ + static getInstance(): Singleton   │
+ * │ + businessMethod()                  │
+ * └─────────────────────────────────────┘
+ *
+ * KEY ELEMENTS:
+ * 1. Static instance variable (holds the single instance)
+ * 2. Private constructor (prevents "new Singleton()")
+ * 3. Private clone (prevents "clone $singleton")
+ * 4. Public static getInstance() (only way to get instance)
+ */
+
+// ============================================
+// THE FLOW EXPLAINED
+// ============================================
+
+/**
+ * HOW SINGLETON PATTERN WORKS - STEP BY STEP:
+ *
+ * FIRST ACCESS:
+ * ────────────────────────────
+ * 1. Client calls getInstance()
+ *    → Singleton::getInstance()
+ *
+ * 2. Check if instance exists
+ *    → if (self::$instance === null)
+ *
+ * 3. Instance is NULL, so create it
+ *    → self::$instance = new Singleton()
+ *    → Uses PRIVATE constructor
+ *
+ * 4. Return the instance
+ *    → return self::$instance
+ *
+ * SUBSEQUENT ACCESS:
+ * ────────────────────────────
+ * 1. Client calls getInstance() again
+ *    → Singleton::getInstance()
+ *
+ * 2. Check if instance exists
+ *    → if (self::$instance === null)
+ *
+ * 3. Instance EXISTS, skip creation
+ *    → No new instance created!
+ *
+ * 4. Return the SAME instance
+ *    → return self::$instance
+ *
+ * RESULT:
+ * ────────────────────────────
+ * $obj1 = Singleton::getInstance()  // Creates instance
+ * $obj2 = Singleton::getInstance()  // Returns same instance
+ * $obj3 = Singleton::getInstance()  // Returns same instance
+ *
+ * $obj1 === $obj2 === $obj3  // TRUE!
+ */
+
+// ============================================
+// KEY CONCEPTS EXPLAINED
+// ============================================
+
+/**
+ * KEY CONCEPT 1: PRIVATE CONSTRUCTOR
+ * ────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * A constructor with private visibility
+ *
+ * WHY USE IT?
+ * Prevents anyone from doing: new Singleton()
+ *
+ * HOW IT WORKS:
+ * private function __construct() {
+ *     // Initialization code
+ * }
+ *
+ * RESULT:
+ * new Singleton()  // ❌ ERROR! Can't access private constructor
+ *
+ * ONLY THE CLASS ITSELF CAN CREATE INSTANCES!
+ *
+ * EXAMPLE:
+ * class Logger {
+ *     private function __construct() {
+ *         $this->logFile = 'app.log';
+ *     }
+ * }
+ *
+ * // ❌ FAILS
+ * $logger = new Logger();  // Error!
+ *
+ * // ✅ WORKS
+ * $logger = Logger::getInstance();
+ */
+
+/**
+ * KEY CONCEPT 2: PRIVATE CLONE
+ * ────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * A __clone() method with private visibility
+ *
+ * WHY USE IT?
+ * Prevents cloning: clone $singleton
+ *
+ * HOW IT WORKS:
+ * private function __clone() {}
+ *
+ * RESULT:
+ * $copy = clone $singleton  // ❌ ERROR! Can't clone
+ *
+ * WITHOUT THIS:
+ * Someone could clone the singleton and break the pattern!
+ *
+ * EXAMPLE:
+ * class Logger {
+ *     private function __clone() {}
+ * }
+ *
+ * $logger1 = Logger::getInstance();
+ * $logger2 = clone $logger1;  // ❌ FAILS! Can't clone
+ */
+
+/**
+ * KEY CONCEPT 3: STATIC INSTANCE VARIABLE
+ * ─────────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * A static variable that holds the single instance
+ *
+ * WHY STATIC?
+ * Because it belongs to the CLASS, not any object
+ *
+ * HOW IT WORKS:
+ * private static ?Singleton $instance = null;
+ *
+ * CHARACTERISTICS:
+ * - Shared across all access
+ * - Persists between calls
+ * - Only one copy exists
+ *
+ * EXAMPLE:
+ * class Logger {
+ *     private static ?Logger $instance = null;
+ *
+ *     public static function getInstance() {
+ *         if (self::$instance === null) {
+ *             self::$instance = new Logger();
+ *         }
+ *         return self::$instance;
+ *     }
+ * }
+ *
+ * THINK OF IT AS:
+ * A box that can only hold one thing
+ */
+
+/**
+ * KEY CONCEPT 4: getInstance() METHOD
+ * ─────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * The ONLY way to get the singleton instance
+ *
+ * WHY PUBLIC STATIC?
+ * - Public: Everyone can call it
+ * - Static: Can call without an object
+ *
+ * HOW IT WORKS:
+ * public static function getInstance(): self {
+ *     if (self::$instance === null) {
+ *         self::$instance = new self();
+ *     }
+ *     return self::$instance;
+ * }
+ *
+ * THE LOGIC:
+ * 1. Check if instance exists
+ * 2. If NO → Create it
+ * 3. If YES → Skip creation
+ * 4. Return the instance
+ *
+ * LAZY INITIALIZATION:
+ * Instance is created ONLY when first requested
+ * Not created at class loading time
+ *
+ * EXAMPLE:
+ * // First call
+ * $logger = Logger::getInstance();  // Creates instance
+ *
+ * // Second call
+ * $logger = Logger::getInstance();  // Returns existing
+ */
+
+/**
+ * KEY CONCEPT 5: GLOBAL STATE
+ * ─────────────────────────────────────
+ *
+ * WHAT IS IT?
+ * State shared across the entire application
+ *
+ * BENEFIT:
+ * Change once, affects everywhere
+ *
+ * EXAMPLE:
+ * $logger = Logger::getInstance();
+ * $logger->setLevel('ERROR');
+ *
+ * // Somewhere else in code
+ * $logger2 = Logger::getInstance();
+ * $logger2->getLevel();  // Returns 'ERROR'
+ *
+ * BOTH VARIABLES POINT TO SAME OBJECT!
+ *
+ * USE CASE:
+ * - Configuration settings
+ * - User session
+ * - Database connection
+ * - Cache
+ *
+ * CAUTION:
+ * Global state can make testing harder
+ * Changes affect entire application
+ */
+
+// ============================================
+// REAL-WORLD EXAMPLES IN SOFTWARE
+// ============================================
+
+/**
+ * EXAMPLE 1: LOGGER
+ * ────────────────────────────
+ * Purpose: Centralized logging
+ * Why Singleton: All logs should go to same place
+ *
+ * $logger = Logger::getInstance();
+ * $logger->setLevel('INFO');
+ * $logger->info('Application started');
+ * $logger->error('Something failed');
+ *
+ * EXAMPLE 2: DATABASE CONNECTION
+ * ────────────────────────────
+ * Purpose: Manage database connections
+ * Why Singleton: Prevent multiple connections
+ *
+ * $db = Database::getInstance();
+ * $db->query('SELECT * FROM users');
+ * $db->query('INSERT INTO logs...');
+ *
+ * EXAMPLE 3: CONFIGURATION MANAGER
+ * ────────────────────────────
+ * Purpose: Application settings
+ * Why Singleton: One source of truth for config
+ *
+ * $config = Config::getInstance();
+ * $config->set('debug', true);
+ * $config->get('app_name');
+ *
+ * EXAMPLE 4: CACHE MANAGER
+ * ────────────────────────────
+ * Purpose: Application-wide caching
+ * Why Singleton: One cache for entire app
+ *
+ * $cache = Cache::getInstance();
+ * $cache->set('user_123', $userData);
+ * $cache->get('user_123');
+ *
+ * EXAMPLE 5: SESSION MANAGER
+ * ────────────────────────────
+ * Purpose: User session handling
+ * Why Singleton: One session per user
+ *
+ * $session = Session::getInstance();
+ * $session->set('user_id', 123);
+ * $session->get('user_id');
+ */
+
+// ============================================
+// SINGLETON IN POPULAR FRAMEWORKS
+// ============================================
+
+/**
+ * LARAVEL SINGLETON
+ * ────────────────────────────
+ *
+ * Laravel uses Singleton Pattern in Service Container!
+ *
+ * BINDING AS SINGLETON:
+ *
+ * app()->singleton('logger', function() {
+ *     return new Logger();
+ * });
+ *
+ * // Every time you resolve, you get the same instance
+ * $logger1 = app('logger');
+ * $logger2 = app('logger');
+ * // $logger1 === $logger2
+ *
+ * FACADES:
+ * Laravel Facades are Singleton-like:
+ *
+ * use Illuminate\Support\Facades\Cache;
+ * use Illuminate\Support\Facades\Log;
+ *
+ * Log::info('Message');  // Always same instance
+ * Cache::put('key', 'value');  // Always same instance
+ *
+ * ELOQUENT MODEL:
+ *
+ * DB::connection();  // Returns singleton connection
+ */
+
+/**
+ * JAVASCRIPT EXAMPLES
+ * ────────────────────────────
+ *
+ * MODULE PATTERN:
+ * const Singleton = (function() {
+ *     let instance;
+ *
+ *     function createInstance() {
+ *         return {
+ *             data: 'I am the instance'
+ *         };
+ *     }
+ *
+ *     return {
+ *         getInstance: function() {
+ *             if (!instance) {
+ *                 instance = createInstance();
+ *             }
+ *             return instance;
+ *         }
+ *     };
+ * })();
+ *
+ * ES6 CLASS:
+ * class Singleton {
+ *     static instance;
+ *
+ *     constructor() {
+ *         if (Singleton.instance) {
+ *             return Singleton.instance;
+ *         }
+ *         Singleton.instance = this;
+ *     }
+ *
+ *     static getInstance() {
+ *         if (!Singleton.instance) {
+ *             Singleton.instance = new Singleton();
+ *         }
+ *         return Singleton.instance;
+ *     }
+ * }
+ */
+
+// ============================================
+// COMMON MISTAKES TO AVOID
+// ============================================
+
+/**
+ * MISTAKE 1: Forgetting Private Constructor
+ * ────────────────────────────
+ * PROBLEM: Anyone can create instances
+ *
+ * // ❌ WRONG
+ * class Logger {
+ *     public function __construct() {}  // Public!
+ * }
+ *
+ * $logger1 = new Logger();  // Works!
+ * $logger2 = new Logger();  // Works! Multiple instances!
+ *
+ * // ✅ CORRECT
+ * class Logger {
+ *     private function __construct() {}
+ * }
+ *
+ * MISTAKE 2: Not Making Clone Private
+ * ────────────────────────────
+ * PROBLEM: Can clone the singleton
+ *
+ * // ❌ WRONG (No private clone)
+ * $logger1 = Logger::getInstance();
+ * $logger2 = clone $logger1;  // Creates copy!
+ *
+ * // ✅ CORRECT
+ * private function __clone() {}
+ *
+ * MISTAKE 3: Not Checking Null in getInstance()
+ * ────────────────────────────
+ * PROBLEM: Creates new instance every time
+ *
+ * // ❌ WRONG
+ * public static function getInstance() {
+ *     return new Singleton();  // Always new!
+ * }
+ *
+ * // ✅ CORRECT
+ * public static function getInstance() {
+ *     if (self::$instance === null) {
+ *         self::$instance = new Singleton();
+ *     }
+ *     return self::$instance;
+ * }
+ *
+ * MISTAKE 4: Using Singleton for Everything
+ * ────────────────────────────
+ * PROBLEM: Overuse leads to tight coupling
+ *
+ * // ❌ WRONG (Singleton abuse)
+ * UserService::getInstance()
+ * ProductService::getInstance()
+ * OrderService::getInstance()
+ * // Everything is singleton!
+ *
+ * // ✅ BETTER (Use dependency injection)
+ * class OrderController {
+ *     public function __construct(
+ *         UserService $user,
+ *         ProductService $product
+ *     ) {}
+ * }
+ *
+ * MISTAKE 5: Serialization/Unserialization
+ * ────────────────────────────
+ * PROBLEM: Can break singleton via serialize
+ *
+ * // ✅ PREVENT UNSERIALIZATION
+ * public function __wakeup() {
+ *     throw new \Exception("Cannot unserialize");
+ * }
+ *
+ * MISTAKE 6: Not Thread-Safe (Multi-threading)
+ * ────────────────────────────
+ * PROBLEM: Race conditions in multi-threaded apps
+ *
+ * // ❌ NOT THREAD-SAFE
+ * if (self::$instance === null) {
+ *     // Thread 2 can enter here!
+ *     self::$instance = new Singleton();
+ * }
+ *
+ * // ✅ THREAD-SAFE (if needed)
+ * synchronized {
+ *     if (self::$instance === null) {
+ *         self::$instance = new Singleton();
+ *     }
+ * }
+ *
+ * MISTAKE 7: Testing Nightmares
+ * ────────────────────────────
+ * PROBLEM: Hard to reset state between tests
+ *
+ * // ✅ ADD RESET FOR TESTING
+ * public static function resetInstance() {
+ *     self::$instance = null;
+ * }
+ *
+ * // In tests
+ * protected function tearDown() {
+ *     Logger::resetInstance();
+ * }
+ */
+
+// ============================================
+// BEST PRACTICES
+// ============================================
+
+/**
+ * BEST PRACTICE 1: Make Constructor Private
+ * ────────────────────────────
+ * Always prevent direct instantiation
+ *
+ * private function __construct() {
+ *     // Initialization
+ * }
+ *
+ * BEST PRACTICE 2: Make Clone Private
+ * ────────────────────────────
+ * Prevent cloning
+ *
+ * private function __clone() {}
+ *
+ * BEST PRACTICE 3: Prevent Unserialization
+ * ────────────────────────────
+ * Stop deserialization attacks
+ *
+ * public function __wakeup() {
+ *     throw new \Exception("Cannot unserialize");
+ * }
+ *
+ * BEST PRACTICE 4: Use for Appropriate Cases
+ * ────────────────────────────
+ * Only use when truly need ONE instance
+ * - Logger
+ * - Database connection
+ * - Configuration
+ * - Cache
+ *
+ * BEST PRACTICE 5: Consider Dependency Injection
+ * ────────────────────────────
+ * DI is often better than Singleton
+ *
+ * // Instead of
+ * $logger = Logger::getInstance();
+ *
+ * // Consider
+ * public function __construct(Logger $logger) {
+ *     $this->logger = $logger;
+ * }
+ *
+ * BEST PRACTICE 6: Add Reset for Testing
+ * ────────────────────────────
+ * Make testing easier
+ *
+ * public static function resetInstance() {
+ *     self::$instance = null;
+ * }
+ *
+ * BEST PRACTICE 7: Document Why Singleton
+ * ────────────────────────────
+ * Add comment explaining the choice
+ *
+ * /**
+ *  * Singleton to ensure one log file
+ *  * for entire application
+ *  */
+ *
+ * BEST PRACTICE 8: Lazy Initialization
+ * ────────────────────────────
+ * Create instance only when needed
+ *
+ * if (self::$instance === null) {
+ *     self::$instance = new self();
+ * }
+ */
+
+// ============================================
+// COMPARISON WITH OTHER PATTERNS
+// ============================================
+
+/**
+ * SINGLETON vs STATIC CLASS
+ * ────────────────────────────
+ * Singleton: Can implement interfaces, has state
+ * Static: Just utility methods, no state
+ *
+ * Use Singleton: When you need object behavior
+ * Use Static: For stateless utility functions
+ *
+ * SINGLETON vs DEPENDENCY INJECTION
+ * ────────────────────────────
+ * Singleton: Global access, tight coupling
+ * DI: Injected dependencies, loose coupling
+ *
+ * Use Singleton: Simple cases, truly global
+ * Use DI: Better testability, flexibility
+ *
+ * SINGLETON vs FACTORY
+ * ────────────────────────────
+ * Singleton: Controls instance creation (one instance)
+ * Factory: Creates objects (many instances)
+ *
+ * Use Singleton: One instance needed
+ * Use Factory: Multiple instances with logic
+ *
+ * SINGLETON vs MONOSTATE
+ * ────────────────────────────
+ * Singleton: One instance, shared access
+ * Monostate: Multiple instances, shared state
+ *
+ * Use Singleton: Truly need one object
+ * Use Monostate: Want normal object syntax
+ */
+
+// ============================================
+// QUICK REFERENCE CHECKLIST
+// ============================================
+
+/**
+ * IMPLEMENTATION CHECKLIST:
+ * ────────────────────────────
+ *
+ * □ Create private static $instance variable
+ * □ Make constructor private
+ * □ Make __clone() private
+ * □ Add __wakeup() to prevent unserialization
+ * □ Create public static getInstance() method
+ * □ In getInstance(), check if instance is null
+ * □ If null, create new instance
+ * □ Return the instance
+ * □ Add business methods as needed
+ * □ Optional: Add reset() for testing
+ * □ Document why using Singleton
+ * □ Test that only one instance is created
+ *
+ * WHEN TO USE SINGLETON:
+ * ────────────────────────────
+ *
+ * ✅ Logger (one log file)
+ * ✅ Database connection (prevent multiple connections)
+ * ✅ Configuration (one source of truth)
+ * ✅ Cache (application-wide)
+ * ✅ Thread pool, connection pool
+ * ✅ Device drivers
+ * ✅ File manager
+ *
+ * WHEN NOT TO USE SINGLETON:
+ * ────────────────────────────
+ *
+ * ❌ When you need multiple instances
+ * ❌ When state varies per user/session
+ * ❌ When testing is important (hard to mock)
+ * ❌ When DI is more appropriate
+ * ❌ Simple utility classes (use static instead)
+ * ❌ When you're not sure (default to DI)
+ */
+
+// ============================================
+// ANTI-PATTERN WARNING
+// ============================================
+
+/**
+ * SINGLETON AS ANTI-PATTERN
+ * ────────────────────────────
+ *
+ * Some consider Singleton an anti-pattern because:
+ *
+ * ❌ GLOBAL STATE:
+ * Makes code harder to test and reason about
+ *
+ * ❌ HIDDEN DEPENDENCIES:
+ * Dependencies not obvious from constructor
+ *
+ * class UserService {
+ *     public function create() {
+ *         Logger::getInstance()->info();  // Hidden!
+ *     }
+ * }
+ *
+ * ❌ TIGHT COUPLING:
+ * Hard to replace or extend
+ *
+ * ❌ TESTING ISSUES:
+ * Difficult to mock, state persists between tests
+ *
+ * BETTER ALTERNATIVE: Dependency Injection
+ * ────────────────────────────
+ *
+ * // Instead of Singleton
+ * Logger::getInstance()->info('message');
+ *
+ * // Use Dependency Injection
+ * class UserService {
+ *     private Logger $logger;
+ *
+ *     public function __construct(Logger $logger) {
+ *         $this->logger = $logger;
+ *     }
+ *
+ *     public function create() {
+ *         $this->logger->info('User created');
+ *     }
+ * }
+ *
+ * // Laravel Container ensures only one instance
+ * app()->singleton(Logger::class);
+ *
+ * WHEN SINGLETON IS OK:
+ * - Small projects
+ * - Truly global resources (logger, config)
+ * - Performance-critical cases
+ * - When DI is overkill
+ *
+ * GOLDEN RULE:
+ * When in doubt, use Dependency Injection!
+ * Only use Singleton when you're absolutely sure.
+ */
+
+// ============================================
+// SUMMARY
+// ============================================
+
+/**
+ * SINGLETON PATTERN IN ONE PAGE:
+ * ────────────────────────────
+ *
+ * WHAT: Ensure only ONE instance of a class exists
+ *
+ * WHY: Controlled access, resource management, global state
+ *
+ * WHEN: Logger, Database, Configuration, Cache
+ *
+ * HOW:
+ * 1. Private constructor
+ * 2. Private clone
+ * 3. Static $instance variable
+ * 4. Public static getInstance()
+ *
+ * COMPONENTS:
+ * - Private Constructor: Prevents "new Class()"
+ * - Private Clone: Prevents "clone $object"
+ * - Static Instance: Holds the single instance
+ * - getInstance(): Returns the instance
+ *
+ * BENEFITS:
+ * ✅ Only one instance
+ * ✅ Global access
+ * ✅ Lazy initialization
+ * ✅ Consistent state
+ * ✅ Resource efficient
+ *
+ * DRAWBACKS:
+ * ❌ Global state
+ * ❌ Hard to test
+ * ❌ Hidden dependencies
+ * ❌ Tight coupling
+ *
+ * EXAMPLE:
+ * class Logger {
+ *     private static ?Logger $instance = null;
+ *
+ *     private function __construct() {}
+ *     private function __clone() {}
+ *
+ *     public static function getInstance(): Logger {
+ *         if (self::$instance === null) {
+ *             self::$instance = new Logger();
+ *         }
+ *         return self::$instance;
+ *     }
+ * }
+ *
+ * $logger1 = Logger::getInstance();
+ * $logger2 = Logger::getInstance();
+ * // $logger1 === $logger2 (SAME OBJECT!)
+ *
+ * REMEMBER:
+ * - Private constructor!
+ * - Check null before creating
+ * - Return same instance
+ * - Use sparingly
+ *
+ * IN LARAVEL:
+ * - app()->singleton('class')
+ * - Facades use Singleton-like pattern
+ * - Service Container manages singletons
+ *
+ * USE WHEN:
+ * ✅ Truly need ONE instance
+ * ✅ Logger, Config, Cache
+ * ✅ Database connection
+ * ✅ Simple projects
+ *
+ * DON'T USE WHEN:
+ * ❌ Need multiple instances
+ * ❌ Testability is important
+ * ❌ State varies per user
+ * ❌ When DI is better
+ *
+ * GOLDEN RULE:
+ * "There can be only one!"
+ * Use Singleton only when you're absolutely sure
+ * you need exactly ONE instance.
+ *
+ * ALTERNATIVE:
+ * Consider Dependency Injection instead!
+ * Laravel's Container can manage singletons better.
+ */
